@@ -1,0 +1,16 @@
+useDynLib(Rgtsvm)
+
+import(graphics)
+import(grDevices)
+
+export(svm)
+export(predict.gtsvm)
+export(print.gtsvm)
+
+S3method(summary, gtsvm)
+S3method(plot, gtsvm)
+S3method(predict, gtsvm)
+S3method(print, gtsvm)
+S3method(print, summary.gtsvm)
+S3method(svm, default)
+S3method(svm, formula)
