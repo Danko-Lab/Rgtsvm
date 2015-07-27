@@ -1,9 +1,7 @@
-svm <-
-function (x, ...)
+svm <- function (x, ...)
     UseMethod ("svm")
 
-svm.formula <-
-function (formula, data = NULL, ..., subset, na.action = na.omit, scale = TRUE)
+svm.formula <- function (formula, data = NULL, ..., subset, na.action = na.omit, scale = TRUE)
 {
     call <- match.call()
     if (!inherits(formula, "formula"))
@@ -41,8 +39,7 @@ function (formula, data = NULL, ..., subset, na.action = na.omit, scale = TRUE)
     return (ret)
 }
 
-svm.default <-
-function (x,
+svm.default <- function (x,
           y           = NULL,
           scale       = TRUE,
           type        = "C-classification",
@@ -323,8 +320,7 @@ cat(".CALL(gtsvmtrain)\n");
     ret
 }
 
-predict.gtsvm <-
-function (object, newdata,
+predict.gtsvm <- function (object, newdata,
           decision.values = FALSE,
           probability = FALSE,
           ...,
@@ -452,9 +448,6 @@ ptm <- proc.time()
 cat(".Finish(svmpredict)\n");
 show(proc.time() - ptm);
 
-	mProb <- ret$ret;
-save(mProb, file="temp-prob.rdata");
-
     ret2 <- if ( is.character(object$levels) && length(object$levels)> 2 ) # classification: return factors
         factor (object$levels[ret$ret], levels = object$levels)
     else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
@@ -468,8 +461,7 @@ save(mProb, file="temp-prob.rdata");
     ret2
 }
 
-print.gtsvm <-
-function (x, ...)
+print.gtsvm <- function (x, ...)
 {
     cat("\nCall:", deparse(x$call, 0.8 * getOption("width")), "\n", sep="\n")
     cat("Parameters:\n")
@@ -502,14 +494,12 @@ function (x, ...)
 
 }
 
-summary.gtsvm <-
-function(object, ...)
+summary.gtsvm <- function(object, ...)
     structure(object, class="summary.gtsvm")
 
-print.summary.gtsvm <-
-function (x, ...)
+print.summary.gtsvm <- function (x, ...)
 {
-    print.svm(x)
+    print.gtsvm(x)
     if (x$type<2) {
         cat(" (", x$nSV, ")\n\n")
         cat("\nNumber of Classes: ", x$nclasses, "\n\n")
@@ -532,8 +522,7 @@ function (x, ...)
     cat("\n\n")
 }
 
-scale.data.frame <-
-function(x, center = TRUE, scale = TRUE)
+scale.data.frame <- function(x, center = TRUE, scale = TRUE)
 {
     i <- sapply(x, is.numeric)
     if (ncol(x[, i, drop = FALSE])) {
@@ -546,31 +535,35 @@ function(x, center = TRUE, scale = TRUE)
     x
 }
 
-plot.gtsvm <-
-function(x, data, formula = NULL, fill = TRUE,
+plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
          grid = 50, slice = list(), symbolPalette = palette(),
          svSymbol = "x", dataSymbol = "o", ...)
 {
-    if (x$type < 3) {
+    if (x$type < 3) 
+    {
         if (is.null(formula) && ncol(data) == 3) {
             formula <- formula(delete.response(terms(x)))
             formula[2:3] <- formula[[2]][2:3]
         }
+        
         if (is.null(formula))
             stop("missing formula.")
-        if (fill) {
+        
+        if (fill) 
+        {
             sub <- model.frame(formula, data)
             xr <- seq(min(sub[, 2]), max(sub[, 2]), length = grid)
             yr <- seq(min(sub[, 1]), max(sub[, 1]), length = grid)
             l <- length(slice)
-            if (l < ncol(data) - 3) {
+            
+            if (l < ncol(data) - 3) 
+            {
                 slnames <- names(slice)
-                slice <- c(slice, rep(list(0), ncol(data) - 3 -
-                                      l))
+                slice <- c(slice, rep(list(0), ncol(data) - 3 - l))
                 names <- labels(delete.response(terms(x)))
-                names(slice) <- c(slnames, names[!names %in%
-                                                 c(colnames(sub), slnames)])
+                names(slice) <- c(slnames, names[!names %in% c(colnames(sub), slnames)])
             }
+            
             for (i in names(which(sapply(data, is.factor))))
                 if (!is.factor(slice[[i]])) {
                     levs <- levels(data[[i]])
@@ -581,10 +574,10 @@ function(x, data, formula = NULL, fill = TRUE,
                     slice[[i]] <- fac
                 }
 
-            lis <- c(list(yr), list(xr), slice)
-            names(lis)[1:2] <- colnames(sub)
-            new <- expand.grid(lis)[, labels(terms(x))]
-            preds <- predict(x, new)
+            lis <- c(list(yr), list(xr), slice);
+            names(lis)[1:2] <- colnames(sub);
+            new <- expand.grid(lis)[, labels(terms(x))];
+            preds <- predict(x, new);
             filled.contour(xr, yr,
                            matrix(as.numeric(preds),
                                   nrow = length(xr), byrow = TRUE),
@@ -604,65 +597,21 @@ function(x, data, formula = NULL, fill = TRUE,
                            labels = levels(preds),
                            las = 3),
                            plot.title = title(main = "SVM classification plot",
-                           xlab = names(lis)[2], ylab = names(lis)[1]),
-                           ...)
+                           xlab = names(lis)[2], ylab = names(lis)[1]), ...);
         }
         else {
             plot(formula, data = data, type = "n", ...)
-            colind <- as.numeric(model.response(model.frame(x,
-                                                            data)))
+            colind <- as.numeric(model.response(model.frame(x, data)))
+            
             dat1 <- data[-x$index,]
             dat2 <- data[x$index,]
             coltmp1 <- symbolPalette[colind[-x$index]]
             coltmp2 <- symbolPalette[colind[x$index]]
             points(formula, data = dat1, pch = dataSymbol, col = coltmp1)
             points(formula, data = dat2, pch = svSymbol, col = coltmp2)
+            
             invisible()
         }
     }
 }
 
-write.gtsvm <-
-function (object, svm.file="Rdata.svm", scale.file = "Rdata.scale",
-          yscale.file = "Rdata.yscale")
-{
-
-    ret <- .C ("svmwrite",
-               ## model
-               as.double  (if (object$sparse) object$SV@ra else t(object$SV)),
-               as.integer (nrow(object$SV)), as.integer(ncol(object$SV)),
-               as.integer (if (object$sparse) object$SV@ia else 0),
-               as.integer (if (object$sparse) object$SV@ja else 0),
-               as.double  (as.vector(object$coefs)),
-               as.double  (object$rho),
-               as.integer (object$compprob),
-               as.double  (if (object$compprob) object$probA else 0),
-               as.double  (if (object$compprob) object$probB else 0),
-               as.integer (object$nclasses),
-               as.integer (object$tot.nSV),
-               as.integer (object$labels),
-               as.integer (object$nSV),
-               as.integer (object$sparse),
-
-               ## parameter
-               as.integer (object$type),
-               as.integer (object$kernel),
-               as.integer (object$degree),
-               as.double  (object$gamma),
-               as.double  (object$coef0),
-
-               ## filename
-               as.character(svm.file),
-
-               PACKAGE = "e1071"
-               )$ret
-
-    write.table(data.frame(center = object$x.scale$"scaled:center",
-                           scale  = object$x.scale$"scaled:scale"),
-                file=scale.file, col.names=FALSE, row.names=FALSE)
-
-    if (!is.null(object$y.scale))
-        write.table(data.frame(center = object$y.scale$"scaled:center",
-                               scale  = object$y.scale$"scaled:scale"),
-                    file=yscale.file, col.names=FALSE, row.names=FALSE)
-}

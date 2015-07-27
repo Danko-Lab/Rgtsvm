@@ -316,7 +316,6 @@ static inline void SVM_SparseSparseMemcpy2d_Helper( std::vector< std::pair< unsi
 				std::pair< int, int > const head = queue.top();
 				unsigned int const row    = -head.first;
 				unsigned int const column = -head.second;
-Rprintf("%d >= %d, %d < %d %d < %d \n", row, ii, row, rows,column, columns );
 				BOOST_ASSERT( ( row >= ii ) && ( row < rows ) );
 				BOOST_ASSERT( column < columns );
 				if ( row != ii )
