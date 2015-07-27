@@ -316,6 +316,7 @@ static inline void SVM_SparseSparseMemcpy2d_Helper( std::vector< std::pair< unsi
 				std::pair< int, int > const head = queue.top();
 				unsigned int const row    = -head.first;
 				unsigned int const column = -head.second;
+Rprintf("%d >= %d, %d < %d %d < %d \n", row, ii, row, rows,column, columns );
 				BOOST_ASSERT( ( row >= ii ) && ( row < rows ) );
 				BOOST_ASSERT( column < columns );
 				if ( row != ii )
@@ -2851,7 +2852,6 @@ bool const SVM::IterateUnbiasedBinary() {
 		SparseVector::const_iterator jj    = m_trainingVectors[ unclusteredIndex ].begin();
 		SparseVector::const_iterator jjEnd = m_trainingVectors[ unclusteredIndex ].end();
 		for ( ; jj != jjEnd; ++jj ) {
-
 			BOOST_ASSERT( jj->first < m_columns );
 			for ( ; kk < jj->first; ++kk )
 				m_batchVectorsTranspose[ kk * 16 + ii ] = 0;

@@ -59,6 +59,7 @@ function (x,
           subset,
           na.action = na.omit)
 {
+    library(bit64);
     if(inherits(x, "Matrix")) {
         library("SparseM")
         library("Matrix")
@@ -74,8 +75,10 @@ function (x,
                  dimension = c(x$nrow, x$ncol))
     }
     if (sparse <- inherits(x, "matrix.csr"))
-        library("SparseM")
-
+    {
+    	library("SparseM")
+	}
+	
     ## NULL parameters?
     if(is.null(degree)) stop(sQuote("degree"), " must not be NULL!")
     if(is.null(gamma)) stop(sQuote("gamma"), " must not be NULL!")
@@ -218,8 +221,8 @@ cat(".CALL(gtsvmtrain)\n");
                 as.integer(ncol(x)),
                 as.double  (y),
                 ## sparse index info
-                as.integer (if (sparse) x@ia else 0),
-                as.integer (if (sparse) x@ja else 0),
+                as.integer64 (if (sparse) (x@ia)-1 else 0), #offset values start from 0
+                as.integer64 (if (sparse) (x@ja)-1 else 0),   #index values start from 1
 
                 ## parameters
                 as.integer (sparse),
@@ -312,8 +315,9 @@ cat(".CALL(gtsvmtrain)\n");
         ret$fitted <- na.action(predict(ret, xhold,
                                         decision.values = TRUE))
         ret$decision.values <- attr(ret$fitted, "decision.values")
-        attr(ret$fitted, "decision.values") <- NULL
-        if (type > 1) ret$residuals <- y - ret$fitted
+        attr(ret$fitted, "decision.values") <- NULL;
+        if(cret$nclasses==2)
+        	ret$correct <- length( which( ( ret$fitted * y )==1))/length(y);
     }
 
     ret
@@ -326,6 +330,8 @@ function (object, newdata,
           ...,
           na.action = na.omit)
 {
+    library(bit64);
+
     if (missing(newdata))
         return(fitted(object))
 
@@ -409,8 +415,8 @@ ptm <- proc.time()
                as.double  (if (object$sparse) object$SV@ra else object$SV ),
                as.integer (nrow(object$SV)), 
                as.integer (ncol(object$SV)),
-               as.integer (if (object$sparse) object$SV@ia else 0),
-               as.integer (if (object$sparse) object$SV@ja else 0),
+               as.integer64 (if (object$sparse) object$SV@ia-1 else 0),
+               as.integer64 (if (object$sparse) object$SV@ja-1 else 0),
 
                as.integer (object$nclasses),
                as.integer (object$tot.nSV),
@@ -432,8 +438,8 @@ ptm <- proc.time()
                as.integer (sparse),
                as.double  (if (sparse) newdata@ra else newdata ),
                as.integer (nrow(newdata)),
-               as.integer (if (sparse) newdata@ia else 0),
-               as.integer (if (sparse) newdata@ja else 0),
+               as.integer64 (if (sparse) newdata@ia-1 else 0),
+               as.integer64 (if (sparse) newdata@ja-1 else 0),
 
                ## decision-values
                ret = double(nrow(newdata)),

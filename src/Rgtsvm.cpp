@@ -29,8 +29,8 @@ extern "C" void gtsvmtrain (double *pX,
 		   int    *pXrow,
 		   int 	  *pXcol,
 	       double *pY,
-	       int    *pRowIndex,
-	       int 	  *pColIndex,
+	       int    *pVecOffset,// start from 0
+	       int 	  *pVecIndex, // start from 1
 	       int    *pSparse,
 	       int    *pKernelType,
 		   // the number of classes
@@ -93,6 +93,7 @@ extern "C" void gtsvmtrain (double *pX,
 	}
 
 	Rprintf("*pKernel_type=%d *nclasses=%d *pSparse=%d[%d,%d] First=%f, Last=%f\n", *pKernelType, nclasses, *pSparse, *pXrow, *pXcol, pY[0], pY[ *pXrow - 1] );
+
 	if ( *pKernelType == 0 )
 	{
 		*pKernelType = GTSVM_KERNEL_POLYNOMIAL;
@@ -101,16 +102,17 @@ extern "C" void gtsvmtrain (double *pX,
 	}
 
     if (*pSparse > 0)
+	{
 		psvm->InitializeSparse(
 			(void*)pX,
-			(size_t*)pColIndex,
-			(size_t*)pRowIndex,
+			(size_t*)pVecIndex,	  // sizeof (size_t)==8 <==> as.integer64(bit64 package)
+			(size_t*)pVecOffset,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pY,
 			GTSVM_TYPE_DOUBLE,
 			(unsigned int)*pXrow,
 			(unsigned int)*pXcol,
-			columnMajor,
+			false,
 			multiclass,
 			regularization,
 			static_cast< GTSVM_Kernel >(*pKernelType),
@@ -120,6 +122,7 @@ extern "C" void gtsvmtrain (double *pX,
 			biased,
 			smallClusters,
 			activeClusters);
+    }
     else
 		psvm->InitializeDense(
 			(void*)pX,
@@ -255,8 +258,8 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 		  double *pModelX,
 		  int    *pModelRow,
 		  int 	 *pModelCol,
-		  int    *pModelRowindex,
-		  int    *pModelColindex,
+		  int    *pModelVecOffset,
+		  int    *pModelVecIndex,
 
 		  int    *pNclasses,
 		  int    *pTotnSV,
@@ -275,11 +278,11 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 		  int    *pSparseX,
 		  double *pX,
 		  int 	 *pXrow,
-		  int    *pXrowindex,
-		  int    *pXcolindex,
+		  int    *pXVecOffset,
+		  int    *pXVecIndex,
 
-		  double *ret,
-		  double *dec,
+		  double *pRet,
+		  double *pDec,
 		  double *pProb,
 		  char   **pszError)
 {
@@ -312,14 +315,14 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
     if (*pModelSparse > 0)
 		psvm->InitializeSparse(
 			(void*)pModelX,
-			(size_t*)pModelRowindex,
-			(size_t*)pModelColindex,
+			(size_t*)pModelVecIndex,
+			(size_t*)pModelVecOffset,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pModelY,
 			GTSVM_TYPE_DOUBLE,
 			(unsigned int)*pModelRow,
 			(unsigned int)*pModelCol,
-			columnMajor,
+			false,
 			multiclass,
 			regularization,
 			static_cast< GTSVM_Kernel >(*pKernelType),
@@ -382,12 +385,12 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 				(void*)(result.get()),
 				GTSVM_TYPE_DOUBLE,
 				(void*)pX,
-				(size_t*)pXrowindex,
-				(size_t*)pXcolindex,
+				(size_t*)pXVecIndex,
+				(size_t*)pXVecOffset,
 				GTSVM_TYPE_DOUBLE,
 				(unsigned)*pXrow,
 				(unsigned)*pModelCol,
-				columnMajor	);
+				false	);
 	else
 		psvm->ClassifyDense(
 			(void*)(result.get()),
@@ -398,18 +401,31 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 			(unsigned)*pModelCol,
 			columnMajor);
 
-	Rprintf("DONE! [%d,%d]\n", *pXrow, nclasses );
-
 	try
 	{
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
 			for ( unsigned int jj = 0; jj < nclasses; ++jj )
-				pProb[ ii * nclasses + jj ] = result[ ii * nclasses + jj ];
+				pDec[ ii * nclasses + jj ] = result[ ii * nclasses + jj ];
 
 		if(nclasses==1)
+		{
 			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-				if( pProb[ ii ] < 0)  ret[ ii ]= -1; else ret[ ii ] = 1;
+				if( pDec[ ii ] < 0)  pRet[ ii ]= -1; else pRet[ ii ] = 1;
+		}
+		else
+		{
+			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+			{
+				unsigned int n_idx = 0;
+				for ( unsigned int jj = 1; jj < nclasses; ++jj )
+				{
+					if(	pDec[ ii * nclasses + jj ] > pDec[ ii * nclasses + n_idx ] )
+						n_idx = jj;
+				}
 
+				pRet[ ii ]= n_idx + 1;
+			}
+		}
 	}
 	catch( std::exception& error ) {
 		g_error = true;
@@ -427,5 +443,5 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 		return;
 	}
 
-	Rprintf("DONE!\n");
+	Rprintf("DONE! [%d,%d]\n", *pXrow, nclasses );
 }
