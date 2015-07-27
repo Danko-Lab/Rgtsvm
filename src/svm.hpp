@@ -162,12 +162,35 @@ struct SVM {
 		bool const columnMajor
 	) const;
 
+	void SetTrainingResponses(
+		void* const trainingResponses,
+		GTSVM_Type trainingResponsesType,
+		bool const columnMajor
+	);
+
+	void GetTrainingVectorNormsSquared(
+		void* const trainingVectorNormsSquared,
+		GTSVM_Type trainingDataType
+	) const;
+
+	void SetTrainingVectorNormsSquared(
+		void* const trainingVectorNormsSquared,
+		GTSVM_Type trainingDataType	);
+
+	void GetTrainingVectorKernelNormsSquared(
+		void* const trainingVectorKernelNormsSquared,
+		GTSVM_Type trainingDataType
+	) const;
+
+	void SetTrainingVectorKernelNormsSquared(
+		void* const trainingVectorKernelNormsSquared,
+		GTSVM_Type trainingDataType	);
+
 	void GetAlphas(
 		void* const trainingAlphas,
 		GTSVM_Type trainingAlphasType,
 		bool const columnMajor
 	) const;
-
 
 	void SetAlphas(
 		void const* const trainingAlphas,
@@ -212,20 +235,19 @@ struct SVM {
 		bool const columnMajor
 	);
 
-
-private:
-
-	void Cleanup();
-
 	void ClusterTrainingVectors(
 		bool const smallClusters,
 		unsigned int activeClusters
 	);
 
+private:
+
+	void Cleanup();
+
+
 	void InitializeDevice();
 
 	void UpdateResponses();
-
 
 	bool const IterateUnbiasedBinary();
 	bool const IterateBiasedBinary();

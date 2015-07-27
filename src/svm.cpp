@@ -25,7 +25,8 @@
 
 
 #include "headers.hpp"
-
+#include <R.h>
+#include <Rdefines.h>
 
 
 
@@ -1142,6 +1143,7 @@ void SVM::Shrink( bool const smallClusters, unsigned int const activeClusters ) 
 
 	if ( ! m_initializedHost )
 		throw std::runtime_error( "SVM has not been initialized" );
+
 	DeinitializeDevice();
 	BOOST_ASSERT( m_updatedResponses );
 
@@ -1318,12 +1320,12 @@ void SVM::DeinitializeDevice() {
 		if ( m_deviceClusterHeaders != NULL ) {
 
 			CUDA_VERIFY( "Failed to free cluster headers on device", cudaFree( m_deviceClusterHeaders ) );
-			m_deviceTrainingAlphas = NULL;
+			m_deviceClusterHeaders = NULL;
 		}
 		if ( m_deviceClusterSizeSums != NULL ) {
 
 			CUDA_VERIFY( "Failed to free cluster size sums on device", cudaFree( m_deviceClusterSizeSums ) );
-			m_deviceTrainingAlphas = NULL;
+			m_deviceClusterSizeSums = NULL;
 		}
 	}
 }
@@ -1436,6 +1438,90 @@ void SVM::GetTrainingResponses(
 }
 
 
+void SVM::SetTrainingResponses(
+	void* const trainingResponses,
+	GTSVM_Type trainingResponsesType,
+	bool const columnMajor)
+{
+	if ( ! m_initializedHost )
+		throw std::runtime_error( "SVM has not been initialized" );
+
+	SVM_Memcpy2d(
+		m_trainingResponses.get(),
+		trainingResponses,
+		trainingResponsesType,
+		m_rows,
+		m_classes,
+		columnMajor
+	);
+}
+
+
+void SVM::GetTrainingVectorNormsSquared(
+		void* const trainingVectorNormsSquared,
+		GTSVM_Type trainingDataType	) const
+{
+	if ( ! m_initializedHost )
+		throw std::runtime_error( "SVM has not been initialized" );
+
+	SVM_ReverseMemcpy(
+		trainingVectorNormsSquared,
+		0,
+		trainingDataType,
+		m_trainingVectorNormsSquared.get(),
+		m_rows
+	);
+}
+
+void SVM::SetTrainingVectorNormsSquared(
+		void* const trainingVectorNormsSquared,
+		GTSVM_Type trainingDataType	)
+{
+	if ( ! m_initializedHost )
+		throw std::runtime_error( "SVM has not been initialized" );
+
+	SVM_Memcpy(
+		m_trainingVectorNormsSquared.get(),
+		trainingVectorNormsSquared,
+		0,
+		trainingDataType,
+		m_rows
+	);
+}
+
+void SVM::GetTrainingVectorKernelNormsSquared(
+		void* const trainingVectorKernelNormsSquared,
+		GTSVM_Type trainingDataType	) const
+{
+	if ( ! m_initializedHost )
+		throw std::runtime_error( "SVM has not been initialized" );
+
+	SVM_ReverseMemcpy(
+		trainingVectorKernelNormsSquared,
+		0,
+		trainingDataType,
+		m_trainingVectorKernelNormsSquared.get(),
+		m_rows
+	);
+}
+
+void SVM::SetTrainingVectorKernelNormsSquared(
+		void* const trainingVectorKernelNormsSquared,
+		GTSVM_Type trainingDataType	)
+{
+	if ( ! m_initializedHost )
+		throw std::runtime_error( "SVM has not been initialized" );
+
+	SVM_Memcpy(
+		m_trainingVectorKernelNormsSquared.get(),
+		trainingVectorKernelNormsSquared,
+		0,
+		trainingDataType,
+		m_rows
+	);
+}
+
+
 void SVM::GetAlphas(
 	void* const trainingAlphas,
 	GTSVM_Type trainingAlphasType,
@@ -1459,8 +1545,7 @@ void SVM::GetAlphas(
 void SVM::SetAlphas(
 	void const* const trainingAlphas,
 	GTSVM_Type trainingAlphasType,
-	bool const columnMajor
-)
+	bool const columnMajor)
 {
 	if ( ! m_initializedHost )
 		throw std::runtime_error( "SVM has not been initialized" );
@@ -2034,6 +2119,8 @@ void SVM::ClassifyDense(
 		InitializeDevice();
 	BOOST_ASSERT( m_initializedDevice );
 
+	Rprintf("row=%d, m_classes=%d\n", rows, m_classes);
+
 	// **TODO: it would be nice to not copy all of this
 	boost::shared_array< CUDA_FLOAT_DOUBLE > classifications( new CUDA_FLOAT_DOUBLE[ rows * m_classes ] );
 
@@ -2047,12 +2134,14 @@ void SVM::ClassifyDense(
 				SVM_MemcpyStride( m_batchVectorsTranspose + jj, 16, vectors, ii + jj, rows, vectorsType, std::min( columns, m_columns ) );
 			else
 				SVM_MemcpyStride( m_batchVectorsTranspose + jj, 16, vectors, ( ii + jj ) * m_columns, 1, vectorsType, std::min( columns, m_columns ) );
+
 			for ( unsigned int kk = columns; kk < m_columns; ++kk )
 				m_batchVectorsTranspose[ ( kk << 4 ) + jj ] = 0;
 
 			double accumulator = 0;
 			for ( unsigned int kk = 0; kk < m_columns; ++kk )
 				accumulator += Square( m_batchVectorsTranspose[ ( kk << 4 ) + jj ] );
+
 			m_batchVectorNormsSquared[ jj ] = accumulator;
 		}
 
@@ -2107,6 +2196,7 @@ void SVM::ClassifyDense(
 				classifications[ ( ii + jj ) * m_classes + kk ] = m_batchResponses[ kk * 16 + jj ];
 	}
 
+Rprintf("S10\n");
 	if ( m_biased ) {
 
 		CUDA_FLOAT_DOUBLE* ii    = classifications.get();
@@ -2115,6 +2205,7 @@ void SVM::ClassifyDense(
 			*ii += m_bias;
 	}
 
+Rprintf("S11\n");
 	SVM_ReverseMemcpy2d( result, resultType, classifications.get(), rows, m_classes, columnMajor );
 }
 
@@ -2166,7 +2257,7 @@ void SVM::ClusterTrainingVectors(
 	m_clusterIndices.clear();
 	m_clusterNonzeroIndices.clear();
 	m_clusters = ( ( m_rows + ( ( 1u << m_logMaximumClusterSize ) - 1 ) ) >> m_logMaximumClusterSize );
-
+Rprintf("m_clusters=%d activeClusters=%d\n", m_clusters, activeClusters );
 	activeClusters = std::min( activeClusters, m_clusters );
 	BOOST_ASSERT( activeClusters > 0 );
 
@@ -2722,7 +2813,6 @@ void SVM::UpdateResponses() {
 		m_updatedResponses = true;
 	}
 }
-
 
 bool const SVM::IterateUnbiasedBinary() {
 
