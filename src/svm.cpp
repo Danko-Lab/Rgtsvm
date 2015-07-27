@@ -2119,7 +2119,7 @@ void SVM::ClassifyDense(
 		InitializeDevice();
 	BOOST_ASSERT( m_initializedDevice );
 
-	Rprintf("row=%d, m_classes=%d\n", rows, m_classes);
+Rprintf("row=%d, m_classes=%d\n", rows, m_classes);
 
 	// **TODO: it would be nice to not copy all of this
 	boost::shared_array< CUDA_FLOAT_DOUBLE > classifications( new CUDA_FLOAT_DOUBLE[ rows * m_classes ] );
@@ -2196,7 +2196,6 @@ void SVM::ClassifyDense(
 				classifications[ ( ii + jj ) * m_classes + kk ] = m_batchResponses[ kk * 16 + jj ];
 	}
 
-Rprintf("S10\n");
 	if ( m_biased ) {
 
 		CUDA_FLOAT_DOUBLE* ii    = classifications.get();
@@ -2205,7 +2204,6 @@ Rprintf("S10\n");
 			*ii += m_bias;
 	}
 
-Rprintf("S11\n");
 	SVM_ReverseMemcpy2d( result, resultType, classifications.get(), rows, m_classes, columnMajor );
 }
 

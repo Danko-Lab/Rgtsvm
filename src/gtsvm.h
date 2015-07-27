@@ -90,8 +90,8 @@ typedef enum {
 
 	GTSVM_KERNEL_UNKNOWN = 0,
 
-	GTSVM_KERNEL_GAUSSIAN,      /* K( x, y ) = exp( -p1 * || x - y ||^2 ) */
 	GTSVM_KERNEL_POLYNOMIAL,    /* K( x, y ) = ( p1 * <x,y> + p2 )^p3     */
+	GTSVM_KERNEL_GAUSSIAN,      /* K( x, y ) = exp( -p1 * || x - y ||^2 ) */
 	GTSVM_KERNEL_SIGMOID        /* K( x, y ) = tanh( p1 * <x,y> + p2 )    */
 
 } GTSVM_Kernel;
