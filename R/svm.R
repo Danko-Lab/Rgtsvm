@@ -1,3 +1,14 @@
+## Rgtsvm package,  Zhong Wang<zw355@cornell.edu>
+##
+## This scipt is a modification of the svm.R file
+## from the e1071 package (version 1.6-6)
+## https://cran.r-project.org/web/packages/e1071/index.html
+##
+## The copyright information for the e1071 package is as follows:
+## Copyright (C) 2015 David Meyer <David.Meyer at R-project.org> et al.
+## Licensed under GPL-2
+##
+
 svm <- function (x, ...)
     UseMethod ("svm")
 

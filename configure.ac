@@ -1,3 +1,5 @@
+## Rgtsvm package,  Zhong Wang<zw355@cornell.edu>
+##
 ## This scipt is a modification of the configure.in file
 ## from the magma package (version 0.2.1)
 ## http://cran.r-project.org/web/packages/magma/

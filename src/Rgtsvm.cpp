@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2011  Andrew Cotter
+	Copyright (C) 2015  Zhong Wang
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -17,9 +17,11 @@
 
 
 /**
-	\file gtsvm.cpp
-	\brief implementation of C interface to SVM class
+	\file Rgtsvm.cpp
+	\brief R interface of svm and predict
 */
+
+
 
 #include "headers.hpp"
 #include <R.h>
