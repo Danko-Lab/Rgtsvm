@@ -3,6 +3,7 @@ useDynLib(Rgtsvm)
 import(graphics)
 import(grDevices)
 
+export(load.svmlight)
 export(svm)
 export(predict.gtsvm)
 export(print.gtsvm)

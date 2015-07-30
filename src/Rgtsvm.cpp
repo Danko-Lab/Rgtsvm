@@ -27,6 +27,30 @@
 #include <R.h>
 #include <Rdefines.h>
 
+#define _TRY_EXCEPTIONS_ \
+	try {
+
+
+#define _CATCH_EXCEPTIONS_  \
+	}  \
+	catch( std::exception& error ) {  \
+		g_error = true;  \
+		g_errorString = error.what();  \
+	}  \
+	catch( ... ) {  \
+		g_error = true;  \
+		g_errorString = "Unknown error";  \
+	}
+
+#define _CHECK_EXCEPTIONS_ \
+	if(g_error) \
+	{ \
+		strcpy( *pszError, g_errorString.c_str() ); \
+		Rprintf("Error: %s", g_errorString.c_str()); \
+		return; \
+	}
+
+
 extern "C" void gtsvmtrain (double *pX,
 		   int    *pXrow,
 		   int 	  *pXcol,
@@ -45,7 +69,7 @@ extern "C" void gtsvmtrain (double *pX,
 	       double *pCoef0,
 	       // pRegularization <==> cost in libsvm
 	       double *pCost,
-	       double *pTolerance,
+	       double *pEpsilon,
 	       int    *pShrinking,
 	       int    *pMaxIter,
 			//output variables
@@ -78,7 +102,7 @@ extern "C" void gtsvmtrain (double *pX,
 	bool biased = false;
 	bool columnMajor = true;
 	bool smallClusters = false;
-	int  activeClusters =64;
+	int  activeClusters = 64;
 	float regularization = *pCost;
 	float kernelParameter1 = *pGamma;
 	float kernelParameter2 = *pCoef0;
@@ -86,16 +110,21 @@ extern "C" void gtsvmtrain (double *pX,
 	unsigned int nclasses = (unsigned int)(*pRclasses);
 	bool multiclass = (nclasses > 2 );
 
+	Rprintf("pKernel_type=%d nclasses=%d sparse=%d[%d,%d] \n", *pKernelType, nclasses, *pSparse, *pXrow, *pXcol );
+
+	// Only 1 class can not do classfication.
 	if( nclasses == 1 )
 	{
-		g_errorString="WARNING: training data in only one class. See README for details.";
-		strcpy( *pszError, g_errorString.c_str() );
-		Rprintf("Error: %s", g_errorString.c_str());
-		return;
+		g_error = true;
+		g_errorString = "WARNING: training data in only one class. See README for details.";
 	}
 
-	Rprintf("*pKernel_type=%d *nclasses=%d *pSparse=%d[%d,%d] First=%f, Last=%f\n", *pKernelType, nclasses, *pSparse, *pXrow, *pXcol, pY[0], pY[ *pXrow - 1] );
+	// for multiclass, the values are from 0 to nclass-1. but for binary, the values are 1 and -1
+	// the data from R starts from 1
+	if( multiclass )
+		for(int i=0; i<(*pXrow); i++) pY[i] = pY[i] - 1.0;
 
+	// GTSVM doesn't have LINEAR function, use the polynomial to replace it.
 	if ( *pKernelType == 0 )
 	{
 		*pKernelType = GTSVM_KERNEL_POLYNOMIAL;
@@ -103,11 +132,16 @@ extern "C" void gtsvmtrain (double *pX,
 		kernelParameter3 = 1;
 	}
 
+	_CHECK_EXCEPTIONS_
+
+	_TRY_EXCEPTIONS_
+
     if (*pSparse > 0)
 	{
 		psvm->InitializeSparse(
 			(void*)pX,
-			(size_t*)pVecIndex,	  // sizeof (size_t)==8 <==> as.integer64(bit64 package)
+			// sizeof (size_t)==8 <==> as.integer64(bit64 package)
+			(size_t*)pVecIndex,
 			(size_t*)pVecOffset,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pY,
@@ -126,67 +160,65 @@ extern "C" void gtsvmtrain (double *pX,
 			activeClusters);
     }
     else
-		psvm->InitializeDense(
-			(void*)pX,
-			GTSVM_TYPE_DOUBLE,
-			(void*)pY,
-			GTSVM_TYPE_DOUBLE,
-			(unsigned int)*pXrow,
-			(unsigned int)*pXcol,
-			columnMajor,
-			multiclass,
-			regularization,
-			static_cast< GTSVM_Kernel >(*pKernelType),
-			(float)kernelParameter1,
-			(float)kernelParameter2,
-			(float)kernelParameter3,
-			biased,
-			smallClusters,
-			activeClusters);
+	{
+			psvm->InitializeDense(
+				(void*)pX,
+				GTSVM_TYPE_DOUBLE,
+				(void*)pY,
+				GTSVM_TYPE_DOUBLE,
+				(unsigned int)*pXrow,
+				(unsigned int)*pXcol,
+				columnMajor,
+				multiclass,
+				regularization,
+				static_cast< GTSVM_Kernel >(*pKernelType),
+				(float)kernelParameter1,
+				(float)kernelParameter2,
+				(float)kernelParameter3,
+				biased,
+				smallClusters,
+				activeClusters);
+	}
 
-	*pClasses = psvm->GetClasses() + 1;
+	_CATCH_EXCEPTIONS_
 
-	Rprintf("pMaxIter =%d *pTolerance=%f *pClasses =%d \n", *pMaxIter, *pTolerance, *pClasses );
+	_CHECK_EXCEPTIONS_
 
-	unsigned int const repetitions = 256;    // must be a multiple of 16
+	// for multiclass, m_classes = nclasses, but for binary classfication, m_classes is 1!!!
+	*pClasses = (multiclass) ? psvm->GetClasses() : psvm->GetClasses() + 1;
+
+	Rprintf("MaxIter =%d Epsilon=%f nClass =%d \n", *pMaxIter, *pEpsilon, *pClasses );
+
+	// must be a multiple of 16
+	unsigned int const repetitions = 256;
 	for ( unsigned int ii = 0; ii < (unsigned int)(*pMaxIter); ii += repetitions )
 	{
 		double primal =  std::numeric_limits< double >::infinity();
 		double dual   = -std::numeric_limits< double >::infinity();
 
-		try{
-			std::pair< CUDA_FLOAT_DOUBLE, CUDA_FLOAT_DOUBLE > const result = psvm->Optimize( repetitions );
-			primal = result.first;
-			dual   = result.second;
+		_TRY_EXCEPTIONS_
 
-			//Rprintf("Iteration = %d/%d,  primal = %f dual = %f\n", ( ii + 1 ), (*npTotal_iter), primal, dual );
-			if ( 2 * ( primal - dual ) < (*pTolerance) * ( primal + dual ) )
-				break;
-		}
-		catch( std::exception& error ) {
-			g_error = true;
-			g_errorString = error.what();
-		}
-		catch( ... ) {
-			g_error = true;
-			g_errorString = "Unknown error";
-		}
+		std::pair< CUDA_FLOAT_DOUBLE, CUDA_FLOAT_DOUBLE > const result = psvm->Optimize( repetitions );
+		primal = result.first;
+		dual   = result.second;
+
+		if ( 2 * ( primal - dual ) < (*pEpsilon) * ( primal + dual ) )
+			break;
+
+		_CATCH_EXCEPTIONS_
 
 		*npTotal_iter = ii;
 
 		if(g_error) break;
 	}
 
-	if(g_error)
-	{
-		strcpy( *pszError, g_errorString.c_str() );
-		Rprintf("Error: %s", g_errorString.c_str());
-		return;
-	}
+	_CHECK_EXCEPTIONS_
 
-	Rprintf("*npTotal_iter =%d\n", *npTotal_iter );
+	Rprintf("Iteration = %d \n", *npTotal_iter );
 
-	boost::shared_array< float > trainingAlphas( new float[ (*pXrow) * (nclasses-1) ] );
+	//*** for binary classfication, only one Alpha value for each sample.
+	unsigned int nCol = psvm->GetClasses();
+	boost::shared_array< float > trainingAlphas( new float[ (*pXrow) * nCol ] );
 	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_FLOAT, columnMajor );
 
 	*pSV = 0;
@@ -194,7 +226,7 @@ extern "C" void gtsvmtrain (double *pX,
 	for ( unsigned int ii = 0; ii < (unsigned int)(*pXrow); ++ii ) {
 
 		bool zero = true;
-		for ( unsigned int jj = 0; jj < (nclasses-1); ++jj ) {
+		for ( unsigned int jj = 0; jj < nCol; ++jj ) {
 
 			if ( trainingAlphas[ jj * (*pXrow) + ii ] != 0 ) {
 				zero = false;
@@ -212,7 +244,7 @@ extern "C" void gtsvmtrain (double *pX,
 			bool bFound=false;
 			for(int k=0; k<nLableFill;k++)
 			{
-				if(pLabels[k]==pY[ii])
+				if(pLabels[k] == (int)(pY[ii]) )
 				{
 					pSVofclass[k] = pSVofclass[k] + 1;
 					bFound=true;
@@ -221,37 +253,28 @@ extern "C" void gtsvmtrain (double *pX,
 
 			if(!bFound)
 			{
-				pLabels[nLableFill] = pY[ii];
+				pLabels[nLableFill] = (int)(pY[ii]);
 				pSVofclass[nLableFill] = 1;
 				nLableFill++;
 			}
 		}
 	}
 
-	Rprintf("*pSV =%d *pIndex=%d\n", *pSV, *pIndex );
+	Rprintf("SV number = %d\n", *pSV );
 
-	try{
-		psvm->Shrink(smallClusters, activeClusters);
-		psvm->GetTrainingVectorNormsSquared( (void*)pTrainingNormsSquared, GTSVM_TYPE_DOUBLE );
-		psvm->GetTrainingVectorKernelNormsSquared( (void*)pTrainingNormsSquared, GTSVM_TYPE_DOUBLE );
-		psvm->GetTrainingResponses( (void*)pTrainingResponses, GTSVM_TYPE_DOUBLE, columnMajor );
-		psvm->GetAlphas( (void*)pTrainingAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
-	}
-	catch( std::exception& error ) {
-		g_error = true;
-		g_errorString = error.what();
-	}
-	catch( ... ) {
-		g_error = true;
-		g_errorString = "Unknown error";
-	}
+	_TRY_EXCEPTIONS_
 
-	if(g_error)
-	{
-		strcpy( *pszError, g_errorString.c_str() );
-		Rprintf("Error: %s", g_errorString.c_str());
-		return;
-	}
+	psvm->Shrink(smallClusters, activeClusters);
+	psvm->GetTrainingVectorNormsSquared( (void*)pTrainingNormsSquared, GTSVM_TYPE_DOUBLE );
+	psvm->GetTrainingVectorKernelNormsSquared( (void*)pTrainingNormsSquared, GTSVM_TYPE_DOUBLE );
+	psvm->GetTrainingResponses( (void*)pTrainingResponses, GTSVM_TYPE_DOUBLE, columnMajor );
+	psvm->GetAlphas( (void*)pTrainingAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
+
+	_CATCH_EXCEPTIONS_
+	_CHECK_EXCEPTIONS_
+
+	Rprintf("DONE!\n");
+
 }
 
 extern "C" void gtsvmpredict  (int    *pDecisionvalues,
@@ -311,8 +334,9 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 		kernelParameter3 = 1;
 	}
 
-	Rprintf("*pKernel_type=%d *nclasses=%d *pModelSparse=%d[%d,%d] First=%f, Last=%f\n", *pKernelType, nclasses, *pModelSparse, *pModelRow, *pModelCol, pModelY[0], pModelY[ *pModelRow - 1] );
+	Rprintf("Model Load (kernel_type=%d nclasses=%d Model Sparse=%d[%d,%d])\n", *pKernelType, nclasses, *pModelSparse, *pModelRow, *pModelCol );
 
+	_TRY_EXCEPTIONS_
 
     if (*pModelSparse > 0)
 		psvm->InitializeSparse(
@@ -353,34 +377,28 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 			smallClusters,
 			activeClusters);
 
-	try
-	{
-		psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
-		psvm->SetTrainingResponses( (void*)pModelResponses, GTSVM_TYPE_DOUBLE, columnMajor );
-		psvm->SetTrainingVectorNormsSquared( (void*)pModelNormsSquared, GTSVM_TYPE_DOUBLE );
-		psvm->SetTrainingVectorKernelNormsSquared( (void*)pModelNormsSquared, GTSVM_TYPE_DOUBLE );
-		psvm->ClusterTrainingVectors( smallClusters, activeClusters );
-	}
-	catch( std::exception& error ) {
-		g_error = true;
-		g_errorString = error.what();
-	}
-	catch( ... ) {
-		g_error = true;
-		g_errorString = "Unknown error";
-	}
-	if(g_error)
-	{
-		strcpy( *pszError, g_errorString.c_str() );
-		Rprintf("Error: %s", g_errorString.c_str());
-		return;
-	}
+	_CATCH_EXCEPTIONS_
+	_CHECK_EXCEPTIONS_
 
-	nclasses = psvm->GetClasses();
+	Rprintf("Set Model.\n");
 
-	boost::shared_array< double > result( new double[ (*pXrow) * nclasses ] );
+	_TRY_EXCEPTIONS_
 
-	Rprintf("*pSparseX=%d *pXrow=%d, nclasses=%d\n", *pSparseX, *pXrow, nclasses);
+	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
+	psvm->SetTrainingResponses( (void*)pModelResponses, GTSVM_TYPE_DOUBLE, columnMajor );
+	psvm->SetTrainingVectorNormsSquared( (void*)pModelNormsSquared, GTSVM_TYPE_DOUBLE );
+	psvm->SetTrainingVectorKernelNormsSquared( (void*)pModelNormsSquared, GTSVM_TYPE_DOUBLE );
+	psvm->ClusterTrainingVectors( smallClusters, activeClusters );
+
+	_CATCH_EXCEPTIONS_
+	_CHECK_EXCEPTIONS_
+
+	Rprintf("Predicting. (Sparse =%d[%d])\n", *pSparseX, *pXrow);
+
+	unsigned int ncol = psvm->GetClasses();
+	boost::shared_array< double > result( new double[ (*pXrow) * ncol ] );
+
+	_TRY_EXCEPTIONS_
 
     if (*pSparseX > 0)
 			psvm->ClassifySparse(
@@ -403,47 +421,31 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 			(unsigned)*pModelCol,
 			columnMajor);
 
-	try
+	_CATCH_EXCEPTIONS_
+	_CHECK_EXCEPTIONS_
+
+	for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+		for ( unsigned int jj = 0; jj < ncol; ++jj )
+			pDec[ ii * ncol + jj ] = result[ ii * ncol + jj ];
+
+	if(!multiclass)
 	{
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-			for ( unsigned int jj = 0; jj < nclasses; ++jj )
-				pDec[ ii * nclasses + jj ] = result[ ii * nclasses + jj ];
-
-		if(nclasses==1)
-		{
-			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-				if( pDec[ ii ] < 0)  pRet[ ii ]= -1; else pRet[ ii ] = 1;
-		}
-		else
-		{
-			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-			{
-				unsigned int n_idx = 0;
-				for ( unsigned int jj = 1; jj < nclasses; ++jj )
-				{
-					if(	pDec[ ii * nclasses + jj ] > pDec[ ii * nclasses + n_idx ] )
-						n_idx = jj;
-				}
-
-				pRet[ ii ]= n_idx + 1;
-			}
-		}
+			if( pDec[ ii ] < 0)  pRet[ ii ]= -1; else pRet[ ii ] = 1;
 	}
-	catch( std::exception& error ) {
-		g_error = true;
-		g_errorString = error.what();
-	}
-	catch( ... ) {
-		g_error = true;
-		g_errorString = "Unknown error";
-	}
-
-	if(g_error)
+	else
 	{
-		strcpy( *pszError, g_errorString.c_str() );
-		Rprintf("Error: %s", g_errorString.c_str());
-		return;
+		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+		{
+			unsigned int n_idx = 0;
+			for ( unsigned int jj = 1; jj < ncol; ++jj )
+			{
+				if(	pDec[ ii * ncol + jj ] > pDec[ ii * ncol + n_idx ] )
+					n_idx = jj;
+			}
+			pRet[ ii ]= n_idx + 1;
+		}
 	}
 
-	Rprintf("DONE! [%d,%d]\n", *pXrow, nclasses );
+	Rprintf("DONE!(Score[%d,%d])\n", *pXrow, ncol );
 }

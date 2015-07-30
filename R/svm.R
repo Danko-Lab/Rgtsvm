@@ -59,6 +59,7 @@ svm.default <- function (x,
           gamma       = if (is.vector(x)) 1 else 1 / ncol(x),
           coef0       = 0,
           cost        = 1,
+          class.weights = NULL,
           tolerance   = 0.001,
           epsilon     = 0.1,
           shrinking   = TRUE,
@@ -202,9 +203,13 @@ svm.default <- function (x,
     }
 	
     nclass <- 2
-    if (type < 2) nclass <- length(lev)
-
-    err <- empty_string <- paste(rep(" ", 255), collapse = "")
+    if (type < 2) nclass <- length(lev);
+    
+	y.idx <- c();
+	for( y0 in unique(y) )
+		y.idx <- c( y.idx, which( y == y0 ) );
+	y <- y[y.idx];
+	x <- x[y.idx,];
 
     if (is.null(type)) stop("type argument must not be NULL!")
     if (is.null(kernel)) stop("kernel argument must not be NULL!")
@@ -216,10 +221,10 @@ svm.default <- function (x,
     if (is.null(epsilon)) stop("epsilon argument must not be NULL!")
     if (is.null(shrinking)) stop("shrinking argument must not be NULL!")
     if (is.null(sparse)) stop("sparse argument must not be NULL!")
+
+    err <- empty_string <- paste(rep(" ", 255), collapse = "")
     
     maxIter <- nr * 100;
-
-cat(".CALL(gtsvmtrain)\n");
 	ptm <- proc.time()
 
     cret <- .C ("gtsvmtrain",
@@ -256,8 +261,8 @@ cat(".CALL(gtsvmtrain)\n");
                 nSV      = integer  (nclass),
                 rho      = double   (nclass * (nclass - 1) / 2),
                 
-                trainingAlphas             = double   (nr * (nclass - 1) ),
-                trainingResponses          = double   (nr * (nclass - 1) ),
+                trainingAlphas             = double   (nr * nclass ),
+                trainingResponses          = double   (nr * nclass ),
                 trainingNormsSquared       = double   (nr),
                 trainingKernelNormsSquared = double   (nr),
 
@@ -265,13 +270,13 @@ cat(".CALL(gtsvmtrain)\n");
                 error    = err,
                 PACKAGE  = "Rgtsvm");
                 
-	cat(".Finish(svmtrain)\n");
 	show(proc.time() - ptm);
 
     if (cret$error != empty_string)
         stop(paste(cret$error, "!", sep=""))
 
-    cret$index <- cret$index[1:cret$nr]
+    cret$index  <- cret$index[1:cret$nr]
+    gtsvm.class <- ifelse(cret$nclasses==2, 1, cret$nclasses );
 
     ret <- list (
                  call     = match.call(),
@@ -308,8 +313,8 @@ cat(".CALL(gtsvmtrain)\n");
                  rho      = cret$rho[1:(cret$nclasses * (cret$nclasses - 1) / 2)],
 
                  ## coefficiants of sv
-                 trainingAlphas    = matrix( cret$trainingAlphas[1:((cret$nclasses - 1) * cret$nr)], ncol = cret$nclasses - 1 ),
-                 trainingResponses = matrix( cret$trainingResponses[1:((cret$nclasses - 1) * cret$nr)], ncol = cret$nclasses - 1 ),
+                 trainingAlphas    = matrix( cret$trainingAlphas[1:(gtsvm.class * cret$nr)], ncol = gtsvm.class ),
+                 trainingResponses = matrix( cret$trainingResponses[1:(gtsvm.class * cret$nr)], ncol = gtsvm.class ),
                  trainingNormsSquared = cret$trainingNormsSquared[ 1:cret$nr ],
                  trainingKernelNormsSquared = cret$trainingKernelNormsSquared[ 1:cret$nr],
 
@@ -325,7 +330,9 @@ cat(".CALL(gtsvmtrain)\n");
         ret$decision.values <- attr(ret$fitted, "decision.values")
         attr(ret$fitted, "decision.values") <- NULL;
         if(cret$nclasses==2)
-        	ret$correct <- length( which( ( ret$fitted * y )==1))/length(y);
+        	ret$correct <- length( which( ( ret$fitted * y )==1))/length(y)
+        else	
+        	ret$correct <- c();
     }
 
     ret
@@ -333,7 +340,7 @@ cat(".CALL(gtsvmtrain)\n");
 
 predict.gtsvm <- function (object, newdata,
           decision.values = FALSE,
-          probability = FALSE,
+          score = FALSE,
           ...,
           na.action = na.omit)
 {
@@ -410,12 +417,11 @@ predict.gtsvm <- function (object, newdata,
 	for( i in 1:length(object$labels) )
 		y.fake <- c(y.fake, rep( as.numeric(object$labels[i]), object$nSV[i]));
 
-cat(".CALL(gtsvmpredict)\n");
-ptm <- proc.time()
+	ptm <- proc.time()
 
     ret <- .C ("gtsvmpredict",
                as.integer (decision.values),
-               as.integer (probability),
+               as.integer (score),
 
                ## model
                as.integer (object$sparse),
@@ -449,25 +455,31 @@ ptm <- proc.time()
                as.integer64 (if (sparse) newdata@ja-1 else 0),
 
                ## decision-values
-               ret = double(nrow(newdata)),
-               dec = double(nrow(newdata) * object$nclasses * (object$nclasses - 1) / 2),
-               prob = double(nrow(newdata) * object$nclasses),
+               ret = double( nrow(newdata) ),
+               dec = double( nrow(newdata) * object$nclasses ),
+               prob = double( nrow(newdata) * object$nclasses ),
 
                error    = err,
                PACKAGE = "Rgtsvm");
 
-cat(".Finish(svmpredict)\n");
-show(proc.time() - ptm);
+	show(proc.time() - ptm);
 
-    ret2 <- if ( is.character(object$levels) && length(object$levels)> 2 ) # classification: return factors
-        factor (object$levels[ret$ret], levels = object$levels)
-    else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
-        ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center"
-    else
-        ret$ret
+    gtsvm.class <- ifelse(object$nclasses==2, 1, object$nclasses );
+	ret2 <- matrix( ret$dec[ 1:(nrow(newdata)*gtsvm.class) ], nrow = nrow(newdata), ncol= gtsvm.class  );
+	
+	if( !score )
+	{
+		ret2 <- if ( is.character(object$levels) && length(object$levels)> 2 ) # classification: return factors
+			factor (object$levels[ret$ret], levels = object$levels)
+		else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
+			ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center"
+		else
+			ret$ret
 
-    #names(ret2) <- rowns
-    #ret2 <- napredict(act, ret2)
+	    #names(ret2) <- rowns
+	    #ret2 <- napredict(act, ret2)
+	}
+	
 
     ret2
 }
@@ -626,3 +638,37 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
     }
 }
 
+load.svmlight <- function( file.svmlight )
+{
+	con <- file(file.svmlight, "rt")
+
+	lines <- readLines( con )
+
+	vfec <- c();
+	lab  <- c();
+
+	for( j in 1:length(lines)) 
+	{
+		str <- strsplit( lines[j], " " )
+
+		sss <- strsplit( str [[1]] [-1], ":")
+		lab <- c( lab, str[[1]][1] )
+
+		for (i in 1:length(sss))
+			vfec <- rbind( vfec,  c( j, sss[[i]]) );
+	}
+
+	row.n<- max( as.numeric(vfec[,1]))
+	col.n<- max( as.numeric(vfec[,2]))
+
+	Mat <- matrix( data= NA, nrow = row.n, ncol = col.n)
+
+	v0 <- matrix( as.numeric(vfec), ncol=3)
+
+	for(k in 1:nrow(v0))
+		Mat[v0[k,1], v0[k,2]] <- v0[k,3]
+
+	M.new <- data.frame(lab, Mat)
+	
+	return( M.new );
+}

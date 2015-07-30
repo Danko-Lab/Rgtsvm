@@ -2119,8 +2119,6 @@ void SVM::ClassifyDense(
 		InitializeDevice();
 	BOOST_ASSERT( m_initializedDevice );
 
-Rprintf("row=%d, m_classes=%d\n", rows, m_classes);
-
 	// **TODO: it would be nice to not copy all of this
 	boost::shared_array< CUDA_FLOAT_DOUBLE > classifications( new CUDA_FLOAT_DOUBLE[ rows * m_classes ] );
 
@@ -2255,7 +2253,6 @@ void SVM::ClusterTrainingVectors(
 	m_clusterIndices.clear();
 	m_clusterNonzeroIndices.clear();
 	m_clusters = ( ( m_rows + ( ( 1u << m_logMaximumClusterSize ) - 1 ) ) >> m_logMaximumClusterSize );
-Rprintf("m_clusters=%d activeClusters=%d\n", m_clusters, activeClusters );
 	activeClusters = std::min( activeClusters, m_clusters );
 	BOOST_ASSERT( activeClusters > 0 );
 
