@@ -70,7 +70,7 @@ extern "C" void gtsvmtrain (double *pX,
 	       // pRegularization <==> cost in libsvm
 	       double *pCost,
 	       double *pEpsilon,
-	       int    *pShrinking,
+	       int    *pFitted,
 	       int    *pMaxIter,
 			//output variables
 			//# the total number of classes
@@ -90,6 +90,8 @@ extern "C" void gtsvmtrain (double *pX,
 	       double *pTrainingResponses,
 	       double *pTrainingNormsSquared,
 	       double *pTrainingKernelNormsSquared,
+
+	       double * pPredict,
 			//# total iteration
 	       int    *npTotal_iter,
 	       char   **pszError)
@@ -161,23 +163,23 @@ extern "C" void gtsvmtrain (double *pX,
     }
     else
 	{
-			psvm->InitializeDense(
-				(void*)pX,
-				GTSVM_TYPE_DOUBLE,
-				(void*)pY,
-				GTSVM_TYPE_DOUBLE,
-				(unsigned int)*pXrow,
-				(unsigned int)*pXcol,
-				columnMajor,
-				multiclass,
-				regularization,
-				static_cast< GTSVM_Kernel >(*pKernelType),
-				(float)kernelParameter1,
-				(float)kernelParameter2,
-				(float)kernelParameter3,
-				biased,
-				smallClusters,
-				activeClusters);
+		psvm->InitializeDense(
+			(void*)pX,
+			GTSVM_TYPE_DOUBLE,
+			(void*)pY,
+			GTSVM_TYPE_DOUBLE,
+			(unsigned int)*pXrow,
+			(unsigned int)*pXcol,
+			columnMajor,
+			multiclass,
+			regularization,
+			static_cast< GTSVM_Kernel >(*pKernelType),
+			(float)kernelParameter1,
+			(float)kernelParameter2,
+			(float)kernelParameter3,
+			biased,
+			smallClusters,
+			activeClusters);
 	}
 
 	_CATCH_EXCEPTIONS_
@@ -272,6 +274,79 @@ extern "C" void gtsvmtrain (double *pX,
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
+
+
+	if(*pFitted)
+	{
+		_TRY_EXCEPTIONS_
+
+		boost::shared_array< double > result( new double[ (*pXrow) * nCol ] );
+	    if (*pSparse > 0)
+		{
+			psvm->ClassifySparse(
+				(void*)(result.get()),
+				GTSVM_TYPE_DOUBLE,
+				(void*)pX,
+				(size_t*)pVecIndex,
+				(size_t*)pVecOffset,
+				GTSVM_TYPE_DOUBLE,
+				(unsigned)*pXrow,
+				(unsigned)*pXcol,
+				false	);
+
+
+			if(!multiclass)
+			{
+				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+					if( result[ ii ] < 0)  pPredict[ ii ]= -1; else pPredict[ ii ] = 1;
+			}
+			else
+			{
+				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+				{
+					unsigned int n_idx = 0;
+					for ( unsigned int jj = 1; jj < nCol; ++jj )
+					{
+						if(	result[ ii*nCol + jj ] > result[ ii*nCol + n_idx ] )
+							n_idx = jj;
+					}
+					pPredict[ii] = (n_idx+1)*1.0;
+				}
+			}
+		}
+		else
+		{
+			psvm->ClassifyDense(
+				(void*)(result.get()),
+				GTSVM_TYPE_DOUBLE,
+				(void*)pX,
+				GTSVM_TYPE_DOUBLE,
+				(unsigned)*pXrow,
+				(unsigned)*pXcol,
+				columnMajor);
+
+			if(!multiclass)
+			{
+				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+					if( result[ ii ] < 0)  pPredict[ ii ]= -1; else pPredict[ ii ] = 1;
+			}
+			else
+			{
+				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+				{
+					unsigned int n_idx = 0;
+					for ( unsigned int jj = 1; jj < nCol; ++jj )
+					{
+						if(	result[ ii + jj*(*pXrow) ] > result[ ii + n_idx*(*pXrow) ] )
+							n_idx = jj;
+					}
+					pPredict[ii] = (n_idx+1)*1.0;
+				}
+			}
+		}
+		_CATCH_EXCEPTIONS_
+		_CHECK_EXCEPTIONS_
+	}
 
 	Rprintf("DONE!\n");
 
@@ -387,7 +462,7 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
 	psvm->SetTrainingResponses( (void*)pModelResponses, GTSVM_TYPE_DOUBLE, columnMajor );
 	psvm->SetTrainingVectorNormsSquared( (void*)pModelNormsSquared, GTSVM_TYPE_DOUBLE );
-	psvm->SetTrainingVectorKernelNormsSquared( (void*)pModelNormsSquared, GTSVM_TYPE_DOUBLE );
+	psvm->SetTrainingVectorKernelNormsSquared( (void*)pModelKernelNormsSquared, GTSVM_TYPE_DOUBLE );
 	psvm->ClusterTrainingVectors( smallClusters, activeClusters );
 
 	_CATCH_EXCEPTIONS_
@@ -401,17 +476,23 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 	_TRY_EXCEPTIONS_
 
     if (*pSparseX > 0)
-			psvm->ClassifySparse(
-				(void*)(result.get()),
-				GTSVM_TYPE_DOUBLE,
-				(void*)pX,
-				(size_t*)pXVecIndex,
-				(size_t*)pXVecOffset,
-				GTSVM_TYPE_DOUBLE,
-				(unsigned)*pXrow,
-				(unsigned)*pModelCol,
-				false	);
+	{
+		psvm->ClassifySparse(
+			(void*)(result.get()),
+			GTSVM_TYPE_DOUBLE,
+			(void*)pX,
+			(size_t*)pXVecIndex,
+			(size_t*)pXVecOffset,
+			GTSVM_TYPE_DOUBLE,
+			(unsigned)*pXrow,
+			(unsigned)*pModelCol,
+			false	);
+		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+			for ( unsigned int jj = 0; jj < ncol; ++jj )
+				pDec[ ii + jj*(*pXrow) ] = result[ ii*ncol + jj ];
+	}
 	else
+	{
 		psvm->ClassifyDense(
 			(void*)(result.get()),
 			GTSVM_TYPE_DOUBLE,
@@ -420,13 +501,14 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 			(unsigned)*pXrow,
 			(unsigned)*pModelCol,
 			columnMajor);
+		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+			for ( unsigned int jj = 0; jj < ncol; ++jj )
+				pDec[ ii + jj*(*pXrow) ] = result[ ii + jj*(*pXrow) ];
+	}
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-		for ( unsigned int jj = 0; jj < ncol; ++jj )
-			pDec[ ii * ncol + jj ] = result[ ii * ncol + jj ];
 
 	if(!multiclass)
 	{
@@ -440,7 +522,7 @@ extern "C" void gtsvmpredict  (int    *pDecisionvalues,
 			unsigned int n_idx = 0;
 			for ( unsigned int jj = 1; jj < ncol; ++jj )
 			{
-				if(	pDec[ ii * ncol + jj ] > pDec[ ii * ncol + n_idx ] )
+				if(	pDec[ ii + jj*(*pXrow) ] > pDec[ ii + n_idx*(*pXrow) ] )
 					n_idx = jj;
 			}
 			pRet[ ii ]= n_idx + 1;

@@ -9,9 +9,12 @@
 #SBATCH --mail-type=ALL
 
 
+module load gcc/4.7.1
 module load cuda
+module load boost/1.55.0
 
-/home1/03350/tg826494/Rsrc/GTSVM/gtsvm/bin/gtsvm_initialize -f test1-gt.dat -o test1-gt.mdl -C 1 -k gaussian -1 0.05
+
+/home1/03350/tg826494/Rsrc/GTSVM/gtsvm/bin/gtsvm_initialize -f glass.scale -m 1 -o test1-gt.mdl -C 1 -k gaussian -1 0.05
 
 /home1/03350/tg826494/Rsrc/GTSVM/gtsvm/bin/gtsvm_optimize -i test1-gt.mdl -o test1-gt.mdl -e 0.001 -n 100000000
 

@@ -59,9 +59,7 @@ svm.default <- function (x,
           gamma       = if (is.vector(x)) 1 else 1 / ncol(x),
           coef0       = 0,
           cost        = 1,
-          class.weights = NULL,
-          tolerance   = 0.001,
-          epsilon     = 0.1,
+          epsilon     = 0.01,
           shrinking   = TRUE,
           fitted      = TRUE,
           ...,
@@ -69,11 +67,13 @@ svm.default <- function (x,
           na.action = na.omit)
 {
     library(bit64);
+    
     if(inherits(x, "Matrix")) {
         library("SparseM")
         library("Matrix")
         x <- as(x, "matrix.csr")
     }
+    
     if(inherits(x, "simple_triplet_matrix")) {
         library("SparseM")
         ind <- order(x$i, x$j)
@@ -83,6 +83,7 @@ svm.default <- function (x,
                  ia = as.integer(cumsum(c(1, tabulate(x$i[ind])))),
                  dimension = c(x$nrow, x$ncol))
     }
+    
     if (sparse <- inherits(x, "matrix.csr"))
     {
     	library("SparseM")
@@ -94,20 +95,13 @@ svm.default <- function (x,
     if(is.null(coef0)) stop(sQuote("coef0"), " must not be NULL!")
     if(is.null(cost)) stop(sQuote("cost"), " must not be NULL!")
     if(is.null(epsilon)) stop(sQuote("epsilon"), " must not be NULL!")
-    if(is.null(tolerance)) stop(sQuote("tolerance"), " must not be NULL!")
 
-    xhold   <- if (fitted) x else NA
     x.scale <- y.scale <- NULL
     formula <- inherits(x, "svm.formula")
 
     ## only support C-classification
     if (is.null(type)) type <- "C-classification";
-    type <- pmatch(type, c("C-classification",
-                           "nu-classification",
-                           "one-classification",
-                           "eps-regression",
-                           "nu-regression"), 99) - 1
-    if (type > 0) 
+    if (type != "C-classification") 
     	stop("Rgtsvm onpy support C-classification!")
 
 	## kernel type 
@@ -160,64 +154,46 @@ svm.default <- function (x,
                 xtmp <- scale(x[,scale])
                 x[,scale] <- xtmp
                 x.scale <- attributes(xtmp)[c("scaled:center","scaled:scale")]
-                if (is.numeric(y) && (type > 2)) {
-                    y <- scale(y)
-                    y.scale <- attributes(y)[c("scaled:center","scaled:scale")]
-                    y <- as.vector(y)
-                }
             }
         }
     }
 
     ## further parameter checks
     nr <- nrow(x)
-
-    if (!is.vector(y) && !is.factor (y) && type != 2)
-        stop("y must be a vector or a factor.")
     if ( length(y) != nr )
         stop("x and y don't match.")
 
-    lev <- NULL
-    weightlabels <- NULL
+    if (!is.vector(y) && !is.factor (y) )
+        stop("y must be a vector or a factor.")
 
-    ## in case of classification: transform factors into integers
-    if (is.factor(y)) {
-        lev <- levels(y)
-        y.new <- as.integer(y)
-        if (!is.null(class.weights)) {
-            if (is.null(names(class.weights)))
-                stop("Weights have to be specified along with their according level names !")
-            weightlabels <- match (names(class.weights), lev)
-            if (any(is.na(weightlabels)))
-                stop("At least one level name is missing or misspelled.")
-         }
-    } else {
-        if (type < 3) {
-            if(any(as.integer(y) != y))
-                  stop("dependent variable has to be of factor or integer type for classification mode.")
-              y.new <- as.factor(y)
-              lev <- levels(y.new)
-        } 
-        else 
-          	lev <- unique(y)
-    }
-	
-    nclass <- 2
-    if (type < 2) nclass <- length(lev);
-    
+	y.org <- y;
 	y.idx <- c();
-	for( y0 in unique(y) )
+	for( y0 in sort(unique(y) ) )
 		y.idx <- c( y.idx, which( y == y0 ) );
 	y <- y[y.idx];
 	x <- x[y.idx,];
 
+    lev <- NULL
+    ## in case of classification: transform factors into integers
+    if (is.factor(y)) {
+        lev <- levels(y)
+    } else {
+        if(any(as.integer(y) != y))
+           stop("dependent variable has to be of factor or integer type for classification mode.")
+	   	y <- as.factor(y)
+        lev <- levels(y)
+    }
+	
+    nclass <- length(lev);
+    if( nclass==2 )
+		y <- as.integer( c(-1, 1)[y] );
+	
     if (is.null(type)) stop("type argument must not be NULL!")
     if (is.null(kernel)) stop("kernel argument must not be NULL!")
     if (is.null(degree)) stop("degree argument must not be NULL!")
     if (is.null(gamma)) stop("gamma argument must not be NULL!")
     if (is.null(coef0)) stop("coef0 seed argument must not be NULL!")
     if (is.null(cost)) stop("cost argument must not be NULL!")
-    if (is.null(tolerance)) stop("tolerance argument must not be NULL!")
     if (is.null(epsilon)) stop("epsilon argument must not be NULL!")
     if (is.null(shrinking)) stop("shrinking argument must not be NULL!")
     if (is.null(sparse)) stop("sparse argument must not be NULL!")
@@ -249,8 +225,8 @@ svm.default <- function (x,
 				as.double  (coef0),
                 ## regularization
 				as.double  (cost),
-                as.double  (tolerance),
-                as.integer (shrinking),
+                as.double  (epsilon),
+                as.integer (fitted),
                 as.integer (maxIter),
 
                 ## results
@@ -266,6 +242,8 @@ svm.default <- function (x,
                 trainingNormsSquared       = double   (nr),
                 trainingKernelNormsSquared = double   (nr),
 
+                predict = double   (nr),
+
 		        totalIter= integer  (1),
                 error    = err,
                 PACKAGE  = "Rgtsvm");
@@ -276,7 +254,7 @@ svm.default <- function (x,
         stop(paste(cret$error, "!", sep=""))
 
     cret$index  <- cret$index[1:cret$nr]
-    gtsvm.class <- ifelse(cret$nclasses==2, 1, cret$nclasses );
+    gtsvm.class <- ifelse( cret$nclasses==2, 1, cret$nclasses );
 
     ret <- list (
                  call     = match.call(),
@@ -287,7 +265,7 @@ svm.default <- function (x,
                  gamma    = gamma,
                  coef0    = coef0,
 				 
-                 tolerance= tolerance,
+                 epsilon  = epsilon,
                  sparse   = sparse,
                  scaled   = scale,
                  x.scale  = x.scale,
@@ -325,14 +303,14 @@ svm.default <- function (x,
     class (ret) <- "gtsvm"
 
     if (fitted) {
-        ret$fitted <- na.action(predict(ret, xhold,
-                                        decision.values = TRUE))
+    	org.idx <- sort.int(y.idx, index.return=T)$ix;
+        ret$fitted <- as.factor(cret$predict[org.idx]) ;
+        levels( ret$fitted ) <- lev;
+
         ret$decision.values <- attr(ret$fitted, "decision.values")
         attr(ret$fitted, "decision.values") <- NULL;
-        if(cret$nclasses==2)
-        	ret$correct <- length( which( ( ret$fitted * y )==1))/length(y)
-        else	
-        	ret$correct <- c();
+
+       	ret$correct <- length( which( ret$fitted == y.org ) )/length(y)
     }
 
     ret
@@ -405,8 +383,7 @@ predict.gtsvm <- function (object, newdata,
         newdata[,object$scaled] <-
             scale(newdata[,object$scaled, drop = FALSE],
                   center = object$x.scale$"scaled:center",
-                  scale  = object$x.scale$"scaled:scale"
-                  )
+                  scale  = object$x.scale$"scaled:scale")
 
     if (ncol(object$SV) != ncol(newdata))
         stop ("test data does not match model !")
@@ -464,7 +441,7 @@ predict.gtsvm <- function (object, newdata,
 
 	show(proc.time() - ptm);
 
-    gtsvm.class <- ifelse(object$nclasses==2, 1, object$nclasses );
+    gtsvm.class <- ifelse( object$nclasses==2, 1, object$nclasses );
 	ret2 <- matrix( ret$dec[ 1:(nrow(newdata)*gtsvm.class) ], nrow = nrow(newdata), ncol= gtsvm.class  );
 	
 	if( !score )
@@ -480,7 +457,6 @@ predict.gtsvm <- function (object, newdata,
 	    #ret2 <- napredict(act, ret2)
 	}
 	
-
     ret2
 }
 
@@ -638,37 +614,25 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
     }
 }
 
-load.svmlight <- function( file.svmlight )
+load.svmlight = function( filename ) 
 {
-	con <- file(file.svmlight, "rt")
+	require(Matrix)
+  	content = readLines( filename )
+  	num_lines = length( content )
+  	tomakemat = cbind(1:num_lines, -1, substr(content,1,1))
 
-	lines <- readLines( con )
-
-	vfec <- c();
-	lab  <- c();
-
-	for( j in 1:length(lines)) 
-	{
-		str <- strsplit( lines[j], " " )
-
-		sss <- strsplit( str [[1]] [-1], ":")
-		lab <- c( lab, str[[1]][1] )
-
-		for (i in 1:length(sss))
-			vfec <- rbind( vfec,  c( j, sss[[i]]) );
-	}
-
-	row.n<- max( as.numeric(vfec[,1]))
-	col.n<- max( as.numeric(vfec[,2]))
-
-	Mat <- matrix( data= NA, nrow = row.n, ncol = col.n)
-
-	v0 <- matrix( as.numeric(vfec), ncol=3)
-
-	for(k in 1:nrow(v0))
-		Mat[v0[k,1], v0[k,2]] <- v0[k,3]
-
-	M.new <- data.frame(lab, Mat)
+  	# loop over lines
+  	makemat = rbind(tomakemat,
+  	do.call(rbind, 
+    	lapply(1:num_lines, function(i){
+       		# split by spaces, remove lines
+           	line = as.vector( strsplit( content[i], ' ' )[[1]])
+           	cbind(i, t(simplify2array(strsplit(line[-1], ':'))))   
+	})))
 	
-	return( M.new );
+	class(makemat) = "numeric"
+	
+	
+	yx = sparseMatrix(i = makemat[,1], j = makemat[,2]+2, x = makemat[,3])
+	return( yx );
 }
