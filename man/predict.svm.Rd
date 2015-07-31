@@ -5,7 +5,7 @@
   This function predicts values based upon a model trained by \code{svm}.
 }
 \usage{
-\method{predict}{gtsvm}(object, newdata, decision.values = FALSE, ..., na.action = na.omit)
+\method{predict}{gtsvm}(object, newdata, score = FALSE, ..., na.action = na.omit)
 }
 
 \arguments{
@@ -18,7 +18,7 @@
     \code{\link[slam]{simple_triplet_matrix}} provided by the \pkg{slam}
     package). A vector will
     be transformed to a n x 1 matrix.}
-  \item{decision.values}{Logical controlling whether the decision values
+  \item{score}{Logical controlling whether the decision values
     of all binary classifiers computed in multiclass classification
     shall be computed and returned.}
   \item{na.action}{A function to specify the action to be taken if \sQuote{NA}s are

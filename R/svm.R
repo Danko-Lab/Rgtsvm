@@ -12,7 +12,7 @@
 svm <- function (x, ...)
     UseMethod ("svm")
 
-svm.formula <- function (formula, data = NULL, ..., subset, na.action = na.omit, scale = TRUE)
+svm.formula <- function (formula, data = NULL, ..., na.action = na.omit, scale = TRUE)
 {
     call <- match.call()
     if (!inherits(formula, "formula"))
@@ -63,7 +63,6 @@ svm.default <- function (x,
           shrinking   = TRUE,
           fitted      = TRUE,
           ...,
-          subset,
           na.action = na.omit)
 {
     library(bit64);
@@ -113,7 +112,7 @@ svm.default <- function (x,
 
     nac <- attr(x, "na.action")
 
-    ## scaling, subsetting, and NA handling
+    ## scaling, and NA handling
     if (sparse) {
         scale <- rep(FALSE, ncol(x))
         if(!is.null(y)) na.fail(y)
@@ -121,9 +120,8 @@ svm.default <- function (x,
     } else {
         x <- as.matrix(x)
 
-        ## subsetting and na-handling for matrices
+        ## na-handling for matrices
         if (!formula) {
-            if (!missing(subset)) x <- x[subset,]
             if (is.null(y))
                 x <- na.action(x)
             else {
@@ -446,15 +444,10 @@ predict.gtsvm <- function (object, newdata,
 	
 	if( !score )
 	{
-		ret2 <- if ( is.character(object$levels) && length(object$levels)> 2 ) # classification: return factors
-			factor (object$levels[ret$ret], levels = object$levels)
-		else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
-			ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center"
-		else
-			ret$ret
-
-	    #names(ret2) <- rowns
-	    #ret2 <- napredict(act, ret2)
+        ret2 <- as.factor( ret$ret ) ;
+        levels( ret2 ) <- object$levels;
+	    
+	    ret2 <- napredict(act, ret2)
 	}
 	
     ret2
