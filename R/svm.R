@@ -56,7 +56,7 @@ svm.default <- function (x,
           type        = "C-classification",
           kernel      = "radial",
           degree      = 3,
-          gamma       = if (is.vector(x)) 1 else 1 / ncol(x),
+          gamma       = 0.05, #if (is.vector(x)) 1 else 1 / ncol(x),
           coef0       = 0,
           cost        = 1,
           epsilon     = 0.01,
@@ -457,29 +457,20 @@ print.gtsvm <- function (x, ...)
 {
     cat("\nCall:", deparse(x$call, 0.8 * getOption("width")), "\n", sep="\n")
     cat("Parameters:\n")
-    cat("   SVM-Type: ", c("C-classification",
-                           "nu-classification",
-                           "one-classification",
-                           "eps-regression",
-                           "nu-regression")[x$type+1], "\n")
+    cat("   SVM-Type: ", x$type, "\n")
     cat(" SVM-Kernel: ", c("linear",
                            "polynomial",
                            "radial",
                            "sigmoid")[x$kernel+1], "\n")
-    if (x$type==0 || x$type==3 || x$type==4)
-        cat("       cost: ", x$cost, "\n")
+
+    cat("       cost: ", x$cost, "\n")
     if (x$kernel==1)
         cat("     degree: ", x$degree, "\n")
     cat("      gamma: ", x$gamma, "\n")
     if (x$kernel==1 || x$kernel==3)
         cat("     coef.0: ", x$coef0, "\n")
-    if (x$type==1 || x$type==2 || x$type==4)
-        cat("         nu: ", x$nu, "\n")
-    if (x$type==3) {
-        cat("    epsilon: ", x$epsilon, "\n\n")
-        if (x$compprob)
-            cat("Sigma: ", x$sigma, "\n\n")
-    }
+
+    cat("    epsilon: ", x$epsilon, "\n\n")
 
     cat("\nNumber of Support Vectors: ", x$tot.nSV)
     cat("\n\n")
@@ -492,25 +483,11 @@ summary.gtsvm <- function(object, ...)
 print.summary.gtsvm <- function (x, ...)
 {
     print.gtsvm(x)
-    if (x$type<2) {
-        cat(" (", x$nSV, ")\n\n")
-        cat("\nNumber of Classes: ", x$nclasses, "\n\n")
-        cat("Levels:", if(is.numeric(x$levels)) "(as integer)", "\n", x$levels)
-    }
-    cat("\n\n")
-    if (x$type==2) cat("\nNumber of Classes: 1\n\n\n")
 
-    if ("MSE" %in% names(x)) {
-        cat(length (x$MSE), "-fold cross-validation on training data:\n\n", sep="")
-        cat("Total Mean Squared Error:", x$tot.MSE, "\n")
-        cat("Squared Correlation Coefficient:", x$scorrcoef, "\n")
-        cat("Mean Squared Errors:\n", x$MSE, "\n\n")
-    }
-    if ("accuracies" %in% names(x)) {
-        cat(length (x$accuracies), "-fold cross-validation on training data:\n\n", sep="")
-        cat("Total Accuracy:", x$tot.accuracy, "\n")
-        cat("Single Accuracies:\n", x$accuracies, "\n\n")
-    }
+    cat(" (", x$nSV, ")\n\n")
+    cat("\nNumber of Classes: ", x$nclasses, "\n\n")
+    cat("Levels:", if(is.numeric(x$levels)) "(as integer)", "\n", x$levels)
+
     cat("\n\n")
 }
 
@@ -531,8 +508,6 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
          grid = 50, slice = list(), symbolPalette = palette(),
          svSymbol = "x", dataSymbol = "o", ...)
 {
-    if (x$type < 3) 
-    {
         if (is.null(formula) && ncol(data) == 3) {
             formula <- formula(delete.response(terms(x)))
             formula[2:3] <- formula[[2]][2:3]
@@ -604,7 +579,6 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
             
             invisible()
         }
-    }
 }
 
 load.svmlight = function( filename ) 

@@ -8,7 +8,7 @@
 #SBATCH --mail-user=zw355@cornell.edu
 #SBATCH --mail-type=ALL
 
-$R --vanilla --no-save < test1-make-svm.r > test1-make-svm.out
+$R --vanilla --no-save < test1-make-svm.R > test1-make-svm.out
 
 
 
