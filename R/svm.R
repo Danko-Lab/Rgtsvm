@@ -62,6 +62,7 @@ svm.default <- function (x,
           epsilon     = 0.01,
           shrinking   = TRUE,
           fitted      = TRUE,
+          biased      = TRUE,
           ...,
           na.action = na.omit)
 {
@@ -226,6 +227,7 @@ svm.default <- function (x,
                 as.double  (epsilon),
                 as.integer (fitted),
                 as.integer (maxIter),
+                as.integer (biased),
 
                 ## results
                 nclasses = integer  (1),
@@ -268,6 +270,7 @@ svm.default <- function (x,
                  scaled   = scale,
                  x.scale  = x.scale,
                  y.scale  = y.scale,
+                 biased   = biased,
 
 				 #number of classes
                  nclasses = cret$nclasses,  

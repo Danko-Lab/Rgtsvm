@@ -72,6 +72,7 @@ extern "C" void gtsvmtrain (double *pX,
 	       double *pEpsilon,
 	       int    *pFitted,
 	       int    *pMaxIter,
+	       int    *biased,
 			//output variables
 			//# the total number of classes
 	       int    *pClasses,
@@ -101,7 +102,6 @@ extern "C" void gtsvmtrain (double *pX,
 	bool g_error = false;
 	std::string g_errorString;
 
-	bool biased = false;
 	bool columnMajor = true;
 	bool smallClusters = false;
 	int  activeClusters = 64;
