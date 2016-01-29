@@ -64,6 +64,7 @@ struct SparseKernelClusterHeader {
 
 	CUDA_FLOAT_DOUBLE* responses;
 	boost::int32_t* labels;
+	float* lterms;
 	float* alphas;
 	boost::uint32_t* nonzeroIndices;
 

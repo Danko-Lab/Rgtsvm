@@ -33,5 +33,17 @@ plot(cmdscale(dist(iris[,-5])),
      
 
 
-     
+## tune `svm' for classification with RBF-kernel (default in svm),
+## using one split for training/validation set
+
+obj <- tune(svm, Species~., data = iris, ranges = list(gamma = 2^(-1:1), cost = 2^(2:4)), 
+	tunecontrol = tune.control(sampling = "fix");
+)
+
+obj <- tune(svm, Species~., data = iris, ranges = list(gamma = 2^(-1:1), cost = 2^(2:4)), 
+	tunecontrol = tune.control(sampling = "cross", cross=5);
+)
+
+## alternatively:
+## obj <- tune.svm(Species~., data = iris, gamma = 2^(-1:1), cost = 2^(2:4))     
 

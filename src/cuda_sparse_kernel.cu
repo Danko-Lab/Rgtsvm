@@ -756,11 +756,12 @@ __global__ void SparseCalculateBiasKernel(
 
 				CUDA_FLOAT_DOUBLE const response = clusterHeaders[ cluster ].responses[ index ];
 				boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+				float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 				float const alpha = fabs( clusterHeaders[ cluster ].alphas[ index ] );
 
 				if ( ( alpha > 0 ) && ( alpha < regularization ) ) {
 
-					numerator += ( ( label > 0 ) ? 1 : -1 ) - response;
+					numerator += ( ( label > 0 ) ? 1 : -1 )*lterm - response;
 					++denominator;
 				}
 			}
@@ -860,20 +861,25 @@ __global__ void SparseCalculateObjectivesKernel(
 
 					CUDA_FLOAT_DOUBLE const response = clusterHeaders[ cluster ].responses[ index ];
 					boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+					float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 					float const alpha = clusterHeaders[ cluster ].alphas[ index ];
 
 					CUDA_FLOAT_DOUBLE hinge;
 					if ( label > 0 )
-						hinge = 1 - ( response + bias );
+						hinge = lterm - ( response + bias );
+						//hinge = 1 - ( response + bias );
 					else
-						hinge = 1 + ( response + bias );
+						hinge = lterm + ( response + bias );
+						//hinge = 1 + ( response + bias );
+
 					if ( hinge < 0 )
 						hinge = 0;
 
 					CUDA_FLOAT_DOUBLE const weight = 0.5 * alpha * response;
 
 					primalSum += weight + regularization * hinge;
-					dualSum += std::fabs( alpha ) - weight;
+					//dualSum += std::fabs( alpha ) - weight;
+					dualSum += std::fabs( alpha ) * lterm - weight;
 				}
 				else {
 
@@ -1014,13 +1020,14 @@ __global__ void SparseKernelFindLargestScoreKernel(
 
 						CUDA_FLOAT_DOUBLE const response = clusterHeaders[ cluster ].responses[ index ];
 						boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+						float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 						float const alpha = fabs( clusterHeaders[ cluster ].alphas[ index ] );
 
 						float gradient = 0;
 						if ( label > 0 )
-							gradient = 1 - response;
+							gradient = lterm - response;
 						else
-							gradient = 1 + response;
+							gradient = lterm + response;
 
 						score = fabs( gradient );
 						if (
@@ -1034,6 +1041,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 					else {
 
 						boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+						float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 						CUDA_FLOAT_DOUBLE const* pResponse = &clusterHeaders[ cluster ].responses[ index ];
 						float const* pAlpha = &clusterHeaders[ cluster ].alphas[ index ];
 
@@ -1049,7 +1057,8 @@ __global__ void SparseKernelFindLargestScoreKernel(
 							float bound = 0;
 							if ( kk == label ) {
 
-								gradient += 1;
+								//gradient += 1;
+								gradient += lterm;
 								bound = regularization;
 							}
 
@@ -1066,14 +1075,15 @@ __global__ void SparseKernelFindLargestScoreKernel(
 
 						CUDA_FLOAT_DOUBLE const response = clusterHeaders[ cluster ].responses[ index ];
 						boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+						float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 						float const alpha = fabs( clusterHeaders[ cluster ].alphas[ index ] );
 						float const scale = clusterHeaders[ cluster ].vectorKernelNormsSquared[ index ];
 
 						float gradient = 0;
 						if ( label > 0 )
-							gradient = 1 - response;
+							gradient = lterm - response;
 						else
-							gradient = 1 + response;
+							gradient = lterm + response;
 
 						float newAlpha = alpha + gradient / scale;
 						if ( newAlpha > regularization )
@@ -1087,6 +1097,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 					else {
 
 						boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+						float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 						float const scale = clusterHeaders[ cluster ].vectorKernelNormsSquared[ index ];
 						CUDA_FLOAT_DOUBLE const* pResponse = &clusterHeaders[ cluster ].responses[ index ];
 						float const* pAlpha = &clusterHeaders[ cluster ].alphas[ index ];
@@ -1099,7 +1110,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 
 							float gradient = -response;
 							if ( kk == label )
-								gradient += 1;
+								gradient += lterm;
 
 							if ( gradient < minimumGradient )
 								minimumGradient = gradient;
@@ -1115,7 +1126,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 							float bound = 0;
 							if ( kk == label ) {
 
-								gradient += 1;
+								gradient += lterm;
 								bound = regularization;
 							}
 
@@ -1238,17 +1249,18 @@ __global__ void SparseKernelFindLargestPositiveGradientKernel(
 
 					CUDA_FLOAT_DOUBLE const response = clusterHeaders[ cluster ].responses[ index ];
 					boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+					float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 					float const alpha = clusterHeaders[ cluster ].alphas[ index ];
 
 					if ( label > 0 ) {
 
-						float const gradient = 1 - response;
+						float const gradient = lterm - response;
 						if ( alpha < regularization )
 							score = gradient;
 					}
 					else {
 
-						float const gradient = -1 - response;
+						float const gradient = -1*lterm - response;
 						if ( alpha < -0 )
 							score = gradient;
 					}
@@ -1360,17 +1372,18 @@ __global__ void SparseKernelFindLargestNegativeGradientKernel(
 
 					CUDA_FLOAT_DOUBLE const response = clusterHeaders[ cluster ].responses[ index ];
 					boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
+					float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 					float const alpha = clusterHeaders[ cluster ].alphas[ index ];
 
 					if ( label > 0 ) {
 
-						float const gradient = 1 - response;
+						float const gradient = lterm - response;
 						if ( alpha > 0 )
 							score = -gradient;
 					}
 					else {
 
-						float const gradient = -1 - response;
+						float const gradient = -1*lterm - response;
 						if ( alpha > -regularization )
 							score = -gradient;
 					}

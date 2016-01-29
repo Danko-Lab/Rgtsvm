@@ -75,6 +75,8 @@ struct SVM {
 		GTSVM_Type trainingVectorsType,
 		void const* const trainingLabels,
 		GTSVM_Type trainingLabelsType,
+		void const* const trainingLinearTerm,
+		GTSVM_Type trainingLinearTermType,
 		boost::uint32_t const rows,
 		boost::uint32_t const columns,
 		bool const columnMajor,
@@ -86,7 +88,8 @@ struct SVM {
 		float const kernelParameter3,
 		bool const biased,
 		bool const smallClusters,
-		unsigned int const activeClusters
+		unsigned int const activeClusters,
+		bool const initClassification
 	);
 
 	void InitializeDense(
@@ -94,6 +97,8 @@ struct SVM {
 		GTSVM_Type trainingVectorsType,
 		void const* const trainingLabels,
 		GTSVM_Type trainingLabelsType,
+		void const* const trainingLinearTerm,
+		GTSVM_Type trainingLinearTermType,
 		boost::uint32_t const rows,
 		boost::uint32_t const columns,
 		bool const columnMajor,
@@ -105,7 +110,8 @@ struct SVM {
 		float const kernelParameter3,
 		bool const biased,
 		bool const smallClusters,
-		unsigned int const activeClusters
+		unsigned int const activeClusters,
+		bool const initClassification
 	);
 
 	void Load(
@@ -116,7 +122,8 @@ struct SVM {
 
 	void Save( char const* const filename ) const;
 
-	void Shrink( bool const smallClusters, unsigned int const activeClusters );
+	void ShrinkClassfication( bool const smallClusters, unsigned int const activeClusters );
+	void ShrinkRegression( bool const smallClusters, unsigned int const activeClusters );
 
 	void DeinitializeDevice();
 	void Deinitialize();
@@ -198,6 +205,7 @@ struct SVM {
 		bool const columnMajor
 	);
 
+	void SetBias( CUDA_FLOAT_DOUBLE bias );
 
 	void Recalculate();
 
@@ -268,6 +276,7 @@ private:
 
 	boost::shared_array< SparseVector > m_trainingVectors;
 	boost::shared_array< boost::int32_t > m_trainingLabels;
+	boost::shared_array< float > m_trainingLterms;
 	boost::shared_array< float > m_trainingVectorNormsSquared;
 	boost::shared_array< float > m_trainingVectorKernelNormsSquared;
 
@@ -306,6 +315,7 @@ private:
 	float* m_deviceBatchAlphas;
 	boost::uint32_t* m_deviceBatchIndices;
 	boost::int32_t* m_deviceTrainingLabels;
+	float* m_deviceTrainingLterms;
 	float* m_deviceTrainingVectorNormsSquared;
 	float* m_deviceTrainingVectorKernelNormsSquared;
 	CUDA_FLOAT_DOUBLE* m_deviceTrainingResponses;

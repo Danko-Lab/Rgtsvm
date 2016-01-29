@@ -1,6 +1,6 @@
 ## Rgtsvm package,  Zhong Wang<zw355@cornell.edu>
 ##
-## This scipt is a modification of the svm.R file
+## This script is a modification of the svm.R file
 ## from the e1071 package (version 1.6-6)
 ## https://cran.r-project.org/web/packages/e1071/index.html
 ##
@@ -9,10 +9,14 @@
 ## Licensed under GPL-2
 ##
 
+C_CLASSFICATION <- 0;	
+EPSILON_SVR <- 3;	
+
+
 svm <- function (x, ...)
     UseMethod ("svm")
 
-svm.formula <- function (formula, data = NULL, ..., na.action = na.omit, scale = TRUE)
+svm.formula <- function (formula, data = NULL, ..., subset, na.action = na.omit, scale = TRUE)
 {
     call <- match.call()
     if (!inherits(formula, "formula"))
@@ -56,14 +60,17 @@ svm.default <- function (x,
           type        = "C-classification",
           kernel      = "radial",
           degree      = 3,
-          gamma       = 0.05, #if (is.vector(x)) 1 else 1 / ncol(x),
+          gamma       = if (is.vector(x)) 1 else 1 / ncol(x),
           coef0       = 0,
           cost        = 1,
-          epsilon     = 0.01,
+          tolerance   = 0.001,
+          epsilon     = 0.1,
           shrinking   = TRUE,
           fitted      = TRUE,
-          biased      = TRUE,
+          cross       = 0,
+          probability = FALSE,
           ...,
+          subset,
           na.action = na.omit)
 {
     library(bit64);
@@ -95,15 +102,23 @@ svm.default <- function (x,
     if(is.null(coef0)) stop(sQuote("coef0"), " must not be NULL!")
     if(is.null(cost)) stop(sQuote("cost"), " must not be NULL!")
     if(is.null(epsilon)) stop(sQuote("epsilon"), " must not be NULL!")
+    if(is.null(tolerance)) stop(sQuote("tolerance"), " must not be NULL!")
 
     x.scale <- y.scale <- NULL
     formula <- inherits(x, "svm.formula")
 
     ## only support C-classification
-    if (is.null(type)) type <- "C-classification";
-    if (type != "C-classification") 
-    	stop("Rgtsvm onpy support C-classification!")
+    if (is.null(type)) 
+        type <- ifelse ( is.factor(y), "C-classification", "eps-regression");
 
+	type.name <- type;
+	type <- C_CLASSFICATION;
+    	
+    if (type.name != "C-classification" && type.name != "eps-regression") 
+    	stop("Rgtsvm only support C-classification and eps-regression!")
+	else
+		if(type.name == "eps-regression") type <- EPSILON_SVR;
+		
 	## kernel type 
     kernel <- pmatch(kernel, c("linear",
                                "polynomial",
@@ -123,6 +138,13 @@ svm.default <- function (x,
 
         ## na-handling for matrices
         if (!formula) {
+            if (!missing(subset)) {
+                x <- x[subset,]
+                y <- y[subset]
+                if (!is.null(xhold))
+                    xhold <- as.matrix(xhold)[subset,]
+            }
+        
             if (is.null(y))
                 x <- na.action(x)
             else {
@@ -153,17 +175,29 @@ svm.default <- function (x,
                 xtmp <- scale(x[,scale])
                 x[,scale] <- xtmp
                 x.scale <- attributes(xtmp)[c("scaled:center","scaled:scale")]
+				# scale Y for regression
+                if (is.numeric(y) && (type>2)) {
+                    y <- scale(y)
+                    y.scale <- attributes(y)[c("scaled:center","scaled:scale")]
+                    y <- as.vector(y)
+                }
             }
         }
     }
 
     ## further parameter checks
     nr <- nrow(x)
+    if (cross > nr)
+        stop(sQuote("cross"), " cannot exceed the number of observations!")
+
     if ( length(y) != nr )
         stop("x and y don't match.")
 
     if (!is.vector(y) && !is.factor (y) )
         stop("y must be a vector or a factor.")
+	
+	#### C/C++ part of rgtTrain requires the Y is sorted by -1 and 1
+	#### y.idx will be used later! 
 
 	y.org <- y;
 	y.idx <- c();
@@ -174,18 +208,20 @@ svm.default <- function (x,
 
     lev <- NULL
     ## in case of classification: transform factors into integers
-    if (is.factor(y)) {
-        lev <- levels(y)
-    } else {
-        if(any(as.integer(y) != y))
-           stop("dependent variable has to be of factor or integer type for classification mode.")
-	   	y <- as.factor(y)
-        lev <- levels(y)
-    }
+    
+    if( type < EPSILON_SVR )
+    {
+		if (is.factor(y)) {
+			lev <- levels(y)
+		} else {
+			if(any(as.integer(y) != y))
+			   stop("dependent variable has to be of factor or integer type for classification mode.")
+			y <- as.factor(y)
+			lev <- levels(y)
+		}
+	}
 	
     nclass <- length(lev);
-    if( nclass==2 )
-		y <- as.integer( c(-1, 1)[y] );
 	
     if (is.null(type)) stop("type argument must not be NULL!")
     if (is.null(kernel)) stop("kernel argument must not be NULL!")
@@ -193,133 +229,187 @@ svm.default <- function (x,
     if (is.null(gamma)) stop("gamma argument must not be NULL!")
     if (is.null(coef0)) stop("coef0 seed argument must not be NULL!")
     if (is.null(cost)) stop("cost argument must not be NULL!")
+    if (is.null(tolerance)) stop("tolerance argument must not be NULL!")
     if (is.null(epsilon)) stop("epsilon argument must not be NULL!")
     if (is.null(shrinking)) stop("shrinking argument must not be NULL!")
+    if (is.null(cross)) stop("cross argument must not be NULL!")
     if (is.null(sparse)) stop("sparse argument must not be NULL!")
+    if (is.null(probability)) stop("probability argument must not be NULL!")
+	
+	biased <- ifelse(nclass<=2, TRUE, FALSE);
 
-    err <- empty_string <- paste(rep(" ", 255), collapse = "")
-    
-    maxIter <- nr * 100;
-	ptm <- proc.time()
-
-    cret <- .C ("gtsvmtrain",
-                ## data
-                as.double  (if (sparse) x@ra else x),
-                as.integer (nr), 
-                as.integer(ncol(x)),
-                as.double  (y),
-                ## sparse index info
-                as.integer64 (if (sparse) (x@ia)-1 else 0), #offset values start from 0
-                as.integer64 (if (sparse) (x@ja)-1 else 0),   #index values start from 1
-
-                ## parameters
-                as.integer (sparse),
-                as.integer (kernel),
-                as.integer (nclass),
-                ## kernelParameter 3
-                as.integer (degree),
-                ## kernelParameter 1
-                as.double  (gamma),
-                ## kernelParameter 2
-				as.double  (coef0),
-                ## regularization
-				as.double  (cost),
-                as.double  (epsilon),
-                as.integer (fitted),
-                as.integer (maxIter),
-                as.integer (biased),
-
-                ## results
-                nclasses = integer  (1),
-                nr       = integer  (1), # nr of support vectors
-                index    = integer  (nr),
-                labels   = integer  (nclass),
-                nSV      = integer  (nclass),
-                rho      = double   (nclass * (nclass - 1) / 2),
-                
-                trainingAlphas             = double   (nr * nclass ),
-                trainingResponses          = double   (nr * nclass ),
-                trainingNormsSquared       = double   (nr),
-                trainingKernelNormsSquared = double   (nr),
-
-                predict = double   (nr),
-
-		        totalIter= integer  (1),
-                error    = err,
-                PACKAGE  = "Rgtsvm");
-                
-	show(proc.time() - ptm);
-
-    if (cret$error != empty_string)
-        stop(paste(cret$error, "!", sep=""))
+	param <- list(type=type, type.name = type.name, kernel=kernel, degree=degree, gamma=gamma, 
+			 coef0=coef0, cost=cost, tolerance=tolerance, epsilon=epsilon, 
+			 shrinking=shrinking, cross=cross, sparse=sparse, probability=probability,
+			 biased = biased, fitted=fitted, nclass=nclass );
+	
+	if( type == C_CLASSFICATION)
+		cret <- gtsvmtrain.classfication.call( y, x, param );
+	if( type == EPSILON_SVR)
+		cret <- gtsvmtrain.regression.call( y, x, param );
 
     cret$index  <- cret$index[1:cret$nr]
     gtsvm.class <- ifelse( cret$nclasses==2, 1, cret$nclasses );
 
     ret <- list (
-                 call     = match.call(),
-                 type     = type,
-                 kernel   = kernel,
-                 cost     = cost,
-                 degree   = degree,
-                 gamma    = gamma,
-                 coef0    = coef0,
+                 call      = match.call(),
+                 type.name = type.name,
+                 type      = type,
+                 kernel    = kernel,
+                 cost      = cost,
+                 degree    = degree,
+                 gamma     = gamma,
+                 coef0     = coef0,
 				 
-                 epsilon  = epsilon,
-                 sparse   = sparse,
-                 scaled   = scale,
-                 x.scale  = x.scale,
-                 y.scale  = y.scale,
-                 biased   = biased,
+				 tolerance = tolerance,
+                 epsilon   = epsilon,
+                 sparse    = sparse,
+                 scaled    = scale,
+                 x.scale   = x.scale,
+                 y.scale   = y.scale,
+                 biased    = biased,
 
 				 #number of classes
-                 nclasses = cret$nclasses,  
-                 levels   = lev,
+                 nclasses  = cret$nclasses,  
+                 levels    = lev,
                  # total number of sv
-                 tot.nSV  = cret$nr, 		
+                 tot.nSV   = cret$nr, 		
 
                  # number of SV in diff. classes
-                 nSV      = cret$nSV[1:cret$nclasses], 
+                 nSV       = cret$nSV[1:cret$nclasses], 
                  
                  # labels of the SVs.
-                 labels   = cret$label[1:cret$nclasses], 
+                 labels    = cret$label[1:cret$nclasses], 
                  
-                 SV       = if (sparse) SparseM::t(SparseM::t(x[cret$index,])) else t(t(x[cret$index,])), #copy of SV
+                 SV        = if (sparse) SparseM::t(SparseM::t(x[cret$index,])) else x[cret$index,], #copy of SV
+                 y.SV      = y[cret$index],
                  # indexes of sv in x
-                 index    = cret$index,  
-
+                 index     = cret$index,  
+				 	
                  ##constants in decision functions
-                 rho      = cret$rho[1:(cret$nclasses * (cret$nclasses - 1) / 2)],
+                 rho       = cret$rho[1:(cret$nclasses * (cret$nclasses - 1) / 2)],
 
                  ## coefficiants of sv
-                 trainingAlphas    = matrix( cret$trainingAlphas[1:(gtsvm.class * cret$nr)], ncol = gtsvm.class ),
-                 trainingResponses = matrix( cret$trainingResponses[1:(gtsvm.class * cret$nr)], ncol = gtsvm.class ),
-                 trainingNormsSquared = cret$trainingNormsSquared[ 1:cret$nr ],
-                 trainingKernelNormsSquared = cret$trainingKernelNormsSquared[ 1:cret$nr],
+                 coefs    = matrix( cret$coefs[1:(gtsvm.class * cret$nr)], ncol = gtsvm.class ),
 
 		         totalIter = cret$totalIter,
-		         time      = proc.time() - ptm,
+		         t.elapsed = cret$t.elapsed,
                  na.action = nac );
 
-    class (ret) <- "gtsvm"
+    if (cross > 0)
+	{
+		cross.ret <- cross_validation( y, x, param );
+		
+        if ( type > 2) {
+            scale.factor     <- if (any(scale)) crossprod(y.scale$"scaled:scale") else 1;
+            ret$MSE          <- cross.ret$cresults * scale.factor;
+            ret$tot.MSE      <- cross.ret$ctotal1  * scale.factor;
+            ret$scorrcoeff   <- cross.ret$ctotal2;
+        } else {
+            ret$accuracies   <- cross.ret$cresults;
+            ret$tot.accuracy <- cross.ret$ctotal1;
+        }
+	}
+	
+	class (ret) <- "gtsvm"
 
     if (fitted) {
-    	org.idx <- sort.int(y.idx, index.return=T)$ix;
-        ret$fitted <- as.factor(cret$predict[org.idx]) ;
-        levels( ret$fitted ) <- lev;
+    	if(type == C_CLASSFICATION)
+    	{
+			org.idx <- sort.int(y.idx, index.return=T)$ix;
+			ret$fitted <- as.factor(cret$predict[org.idx]) ;
+			levels( ret$fitted ) <- lev;
 
-        ret$decision.values <- attr(ret$fitted, "decision.values")
-        attr(ret$fitted, "decision.values") <- NULL;
+			ret$decision.values <- attr(ret$fitted, "decision.values")
+			attr(ret$fitted, "decision.values") <- NULL;
 
-       	ret$correct <- length( which( ret$fitted == y.org ) )/length(y)
+			ret$fitted.accuracy <- length( which( ret$fitted == y.org ) )/length(y)
+       	}
+       	else
+       	{
+			org.idx <- sort.int(y.idx, index.return=T)$ix;
+
+			ret$decision.values <- matrix( cret$predict[org.idx], ncol=1) ;
+			ret$fitted <- cret$predict[org.idx];
+			y1 <- y[org.idx]
+			
+			if(!is.null(y.scale))
+			{
+				ret$fitted <- ret$fitted * y.scale$"scaled:scale" + y.scale$"scaled:center";
+				y1 <- y1 * y.scale$"scaled:scale" + y.scale$"scaled:center";
+			}
+			
+	    	y1.v <- ret$fitted;
+	    	ret$fitted.MSE <- sum(( y1 - y1.v )^2, na.rm=T)/length(y1);
+		    ret$fitted.r2  <- ( length(y1)* sum(y1.v*y1, na.rm=T) - sum(y1.v, na.rm=T)*sum(y1, na.rm=T) )^2 / ( length(y1)*sum(y1.v^2, na.rm=T) - (sum(y1.v, na.rm=T))^2) / ( length(y1)*sum(y1^2, na.rm=T)- (sum(y1, na.rm=T))^2);
+		    ret$residuals <- (y1 - y1.v)
+       	}
     }
 
     ret
 }
 
+# Cross-Validation-routine from svm-train in R code
+cross_validation <- function ( y, x, param )
+{
+	idx.shuffle <- sample(1:NROW(y));
+	y <- y[idx.shuffle ];
+	x <- x[idx.shuffle,];
+	y.v <- rep(NA, length(y));
+	
+	breaks <- round(seq(1, length(y), length.out=param$cross+1));
+	cresults <- c();
+	
+	for(i in 1:(length(breaks)-1))
+	{
+		idx.cross <- c(breaks[i]:breaks[i+1]);
+		if( param$type == C_CLASSFICATION)
+		{
+			sret <- gtsvmtrain.classfication.call( y[ -idx.cross ], x[ -idx.cross,], param, final.result=TRUE, verbose=FALSE );
+			pret <- gtsvmpredict.classfication.call( x[ idx.cross,], param$sparse, sret, verbose=FALSE );
+
+			if( sret$nclasses==2 )
+				y.v [idx.cross] <- levels(y)[as.factor(pret$ret)]
+			else
+			{
+				ret2 <- matrix( ret$dec[ 1:(length(idx.cross)*param$nclass) ], 
+								nrow = length(idx.cross), ncol= param$nclass  );
+				y.v [idx.cross] <- apply(ret2, 1, which.max);
+			}
+
+			cresults[i] = 100.0 * sum( as.integer(y.v [idx.cross] == y[idx.cross]) )/length(idx.cross);
+		}
+		
+		if( param$type == EPSILON_SVR)
+		{
+			sret <- gtsvmtrain.regression.call( y[ -idx.cross ], x[ -idx.cross,], param, final.result=TRUE, verbose=FALSE );
+			pret <- gtsvmpredict.regression.call( x[ idx.cross,], param$sparse, sret, verbose=FALSE);
+			
+			y.v [idx.cross] <- pret$ret;
+			cresults[i] = sum(( y.v[idx.cross] - y[idx.cross])^2 )/length(idx.cross)
+		}
+	}
+
+	if(param$type == EPSILON_SVR )
+	{
+	    # MSE
+	    ctotal1 <- sum((y.v-y)^2)/length(y);
+	    # R2
+	    ctotal2 <- (length(y)* sum(y.v*y) - sum(y.v)*sum(y) )^2 / ( length(y)*sum(y.v^2) - (sum(y.v))^2) / ( length(y)*sum(y^2)- (sum(y))^2);
+	}
+	else
+	{
+		ctotal1 <- 100.0 * sum(y.v==y)/length(y);
+	    ctotal2 <- NA;
+	}    
+	    
+	return(list(ctotal1=ctotal1, ctotal2=ctotal2, cresults=cresults));
+}
+
+
 predict.gtsvm <- function (object, newdata,
           decision.values = FALSE,
-          score = FALSE,
+          probability = FALSE,
           ...,
           na.action = na.omit)
 {
@@ -359,9 +449,9 @@ predict.gtsvm <- function (object, newdata,
         
     preprocessed <- !is.null(attr(newdata, "na.action"))
     rowns <- if (!is.null(rownames(newdata))) 
-    	rownames(newdata)
-    else
-        1:nrow(newdata)
+		    	rownames(newdata)
+		    else
+		        1:nrow(newdata);
         
     if (!object$sparse) {
         if (inherits(object, "svm.formula")) {
@@ -378,7 +468,7 @@ predict.gtsvm <- function (object, newdata,
     }
 
     if (!is.null(act) && !preprocessed)
-        rowns <- rowns[-act]
+        rowns <- rowns[-act];
 
     if (any(object$scaled))
         newdata[,object$scaled] <-
@@ -388,71 +478,52 @@ predict.gtsvm <- function (object, newdata,
 
     if (ncol(object$SV) != ncol(newdata))
         stop ("test data does not match model !")
-
-    err <- empty_string <- paste(rep(" ", 255), collapse = "")
 	
-	y.fake <- c();
-	for( i in 1:length(object$labels) )
-		y.fake <- c(y.fake, rep( as.numeric(object$labels[i]), object$nSV[i]));
-
-	ptm <- proc.time()
-
-    ret <- .C ("gtsvmpredict",
-               as.integer (decision.values),
-               as.integer (score),
-
-               ## model
-               as.integer (object$sparse),
-               as.double  (if (object$sparse) object$SV@ra else object$SV ),
-               as.integer (nrow(object$SV)), 
-               as.integer (ncol(object$SV)),
-               as.integer64 (if (object$sparse) object$SV@ia-1 else 0),
-               as.integer64 (if (object$sparse) object$SV@ja-1 else 0),
-
-               as.integer (object$nclasses),
-               as.integer (object$tot.nSV),
-               as.double (y.fake),
-
-               as.double  (as.vector(object$trainingAlphas)),
-               as.double  (as.vector(object$trainingResponses)),
-               as.double  (as.vector(object$trainingNormsSquared)),
-               as.double  (as.vector(object$trainingKernelNormsSquared)),
-
-               ## parameter
-               as.integer (object$kernel),
-               as.integer (object$degree),
-               as.double  (object$gamma),
-               as.double  (object$coef0),
-               as.double  (object$cost),
-
-               ## test matrix
-               as.integer (sparse),
-               as.double  (if (sparse) newdata@ra else newdata ),
-               as.integer (nrow(newdata)),
-               as.integer64 (if (sparse) newdata@ia-1 else 0),
-               as.integer64 (if (sparse) newdata@ja-1 else 0),
-
-               ## decision-values
-               ret = double( nrow(newdata) ),
-               dec = double( nrow(newdata) * object$nclasses ),
-               prob = double( nrow(newdata) * object$nclasses ),
-
-               error    = err,
-               PACKAGE = "Rgtsvm");
-
-	show(proc.time() - ptm);
-
-    gtsvm.class <- ifelse( object$nclasses==2, 1, object$nclasses );
-	ret2 <- matrix( ret$dec[ 1:(nrow(newdata)*gtsvm.class) ], nrow = nrow(newdata), ncol= gtsvm.class  );
+	param <- list( decision.values = decision.values, probability = probability );
 	
-	if( !score )
-	{
-        ret2 <- as.factor( ret$ret ) ;
+	# Call C/C++ interface to do predict
+	if(object$type == C_CLASSFICATION)
+		ret <- gtsvmpredict.classfication.call( newdata, sparse, object, param)
+	else if(object$type == EPSILON_SVR)
+		ret <- gtsvmpredict.regression.call( newdata, sparse, object, param)
+	else
+		stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+		
+	ret2 <- ret$ret;
+	if (is.character(object$levels)) # classification: return factors
+    {
+    	ret2 <- as.factor(ret$ret) ;
         levels( ret2 ) <- object$levels;
-	    
-	    ret2 <- napredict(act, ret2)
 	}
+    else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
+        ret2 <- ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center"
 	
+    names(ret2) <- rowns
+    ret2 <- napredict(act, ret2);
+
+    if (decision.values) 
+    {
+        colns = c()
+        for (i in 1:(object$nclasses - 1))
+            for (j in (i + 1):object$nclasses)
+                colns <- c(colns, 
+                           paste(object$levels[object$labels[i]],
+                                 "/", object$levels[object$labels[j]],
+                                 sep = ""))
+        attr(ret2, "decision.values") <-
+            napredict(act, matrix(ret$dec, nrow = nrow(newdata), byrow = TRUE, dimnames = list(rowns, colns) ) )
+    }
+
+    if (probability && object$type < 2) 
+    {
+        if (!object$compprob)
+            warning("SVM has not been trained using `probability = TRUE`, probabilities not available for predictions.")
+        else
+            attr(ret2, "probabilities") <-
+                napredict(act, matrix(ret$prob, nrow = nrow(newdata), byrow = TRUE,
+                			 		  dimnames = list(rowns, object$levels[object$labels]) ) )
+    }
+
     ret2
 }
 
@@ -460,7 +531,7 @@ print.gtsvm <- function (x, ...)
 {
     cat("\nCall:", deparse(x$call, 0.8 * getOption("width")), "\n", sep="\n")
     cat("Parameters:\n")
-    cat("   SVM-Type: ", x$type, "\n")
+    cat("   SVM-Type: ", x$type.name, "\n")
     cat(" SVM-Kernel: ", c("linear",
                            "polynomial",
                            "radial",
@@ -473,8 +544,9 @@ print.gtsvm <- function (x, ...)
     if (x$kernel==1 || x$kernel==3)
         cat("     coef.0: ", x$coef0, "\n")
 
-    cat("    epsilon: ", x$epsilon, "\n\n")
-
+    cat("    tolerance: ", x$tolerance, "\n")
+	cat(" time elapsed: ", x$t.elapsed[3], "\n\n");
+	
     cat("\nNumber of Support Vectors: ", x$tot.nSV)
     cat("\n\n")
 
@@ -548,6 +620,7 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
             names(lis)[1:2] <- colnames(sub);
             new <- expand.grid(lis)[, labels(terms(x))];
             preds <- predict(x, new);
+browser();
             filled.contour(xr, yr,
                            matrix(as.numeric(preds),
                                   nrow = length(xr), byrow = TRUE),
@@ -589,16 +662,16 @@ load.svmlight = function( filename )
 	require(Matrix)
   	content = readLines( filename )
   	num_lines = length( content )
-  	tomakemat = cbind(1:num_lines, -1, substr(content,1,1))
+  	tomakemat = cbind(1:num_lines, -1, unlist(lapply(1:num_lines, function(i){ strsplit( content[i], ' ' )[[1]][1]} )))
 
   	# loop over lines
   	makemat = rbind(tomakemat,
-  	do.call(rbind, 
-    	lapply(1:num_lines, function(i){
-       		# split by spaces, remove lines
-           	line = as.vector( strsplit( content[i], ' ' )[[1]])
-           	cbind(i, t(simplify2array(strsplit(line[-1], ':'))))   
-	})))
+		do.call(rbind, 
+			lapply(1:num_lines, function(i){
+				# split by spaces, remove lines
+				line = as.vector( strsplit( content[i], ' ' )[[1]])
+				cbind(i, t(simplify2array(strsplit(line[-1], ':'))))   
+		})))
 	
 	class(makemat) = "numeric"
 	

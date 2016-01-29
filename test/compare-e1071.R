@@ -10,14 +10,14 @@ trainAllStatus[trainAllStatus==0] <- -1;
 #	load("test1-e.rdata");
 #}else{
 	ptm <- proc.time()
-	model.e <- svm( x=trainAll, y=trainAllStatus, type="C-classification", fitted=FALSE);
+	model.e <- e1071::svm( x=trainAll, y=trainAllStatus, type="C-classification", fitted=FALSE);
 	pt <- proc.time() - ptm
 	show(pt);
 
 	save(pt, model.e, file="test1-e.rdata");
 #}
 
-predict.e <- predict( model.e, trainAll);
+predict.e <- e1071::predict( model.e, trainAll);
 
 save( predict.e, file="test1-e-pre.rdata");
 

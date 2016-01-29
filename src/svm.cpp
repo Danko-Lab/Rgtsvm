@@ -706,6 +706,7 @@ SVM::SVM() :
 	m_deviceBatchAlphas( NULL ),
 	m_deviceBatchIndices( NULL ),
 	m_deviceTrainingLabels( NULL ),
+	m_deviceTrainingLterms( NULL ),
 	m_deviceTrainingVectorNormsSquared( NULL ),
 	m_deviceTrainingVectorKernelNormsSquared( NULL ),
 	m_deviceTrainingResponses( NULL ),
@@ -750,7 +751,6 @@ SVM::SVM() :
 
 
 SVM::~SVM() {
-
 	Cleanup();
 }
 
@@ -762,6 +762,8 @@ void SVM::InitializeSparse(
 	GTSVM_Type trainingVectorsType,
 	void const* const trainingLabels,
 	GTSVM_Type trainingLabelsType,
+	void const* const trainingLterms,
+	GTSVM_Type trainingLinearTermType,
 	boost::uint32_t const rows,
 	boost::uint32_t const columns,
 	bool const columnMajor,
@@ -773,7 +775,8 @@ void SVM::InitializeSparse(
 	float const kernelParameter3,
 	bool const biased,
 	bool const smallClusters,
-	unsigned int const activeClusters
+	unsigned int const activeClusters,
+	bool const initClassification
 )
 {
 	if ( ! m_constructed )
@@ -793,6 +796,9 @@ void SVM::InitializeSparse(
 		m_trainingLabels = boost::shared_array< boost::int32_t >( new boost::int32_t[ m_rows ] );
 		SVM_SparseSparseMemcpy2d( m_trainingVectors.get(), trainingVectors, trainingVectorIndices, trainingVectorOffsets, trainingVectorsType, m_rows, m_columns, columnMajor );
 		SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
+
+		m_trainingLterms = boost::shared_array< float >( new float[ m_rows ] );
+		SVM_Memcpy( m_trainingLterms.get(), trainingLterms, 0, trainingLinearTermType, m_rows );
 
 		if ( multiclass ) {
 
@@ -816,7 +822,8 @@ void SVM::InitializeSparse(
 				present[ m_trainingLabels[ ii ] ] = true;
 			for ( unsigned int ii = 0; ii < m_classes; ++ii )
 				if ( ! present[ ii ] )
-					throw std::runtime_error( "at least one example of each label in {0,1,...,max} must be present in training set" );
+					if( initClassification)
+						throw std::runtime_error( "at least one example of each label in {0,1,...,max} must be present in training set" );
 		}
 		else {
 
@@ -837,7 +844,8 @@ void SVM::InitializeSparse(
 				}
 			}
 			if ( ( ! present[ 0 ] ) || ( ! present[ 1 ] ) )
-				throw std::runtime_error( "at least one positive and negative example must be present in training set" );
+				if(initClassification)
+					throw std::runtime_error( "at least one positive and negative example must be present in training set" );
 		}
 
 		m_trainingVectorNormsSquared       = boost::shared_array< float >( new float[ m_rows ] );
@@ -863,6 +871,8 @@ void SVM::InitializeDense(
 	GTSVM_Type trainingVectorsType,
 	void const* const trainingLabels,
 	GTSVM_Type trainingLabelsType,
+	void const* const trainingLterms,
+	GTSVM_Type trainingLinearTermType,
 	boost::uint32_t const rows,
 	boost::uint32_t const columns,
 	bool const columnMajor,
@@ -874,7 +884,8 @@ void SVM::InitializeDense(
 	float const kernelParameter3,
 	bool const biased,
 	bool const smallClusters,
-	unsigned int const activeClusters
+	unsigned int const activeClusters,
+	bool const initClassification
 )
 {
 	if ( ! m_constructed )
@@ -894,6 +905,9 @@ void SVM::InitializeDense(
 		m_trainingLabels = boost::shared_array< boost::int32_t >( new boost::int32_t[ m_rows ] );
 		SVM_SparseMemcpy2d( m_trainingVectors.get(), trainingVectors, trainingVectorsType, m_rows, m_columns, columnMajor );
 		SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
+
+		m_trainingLterms = boost::shared_array< float >( new float[ m_rows ] );
+		SVM_Memcpy( m_trainingLterms.get(), trainingLterms, 0, trainingLinearTermType, m_rows );
 
 		if ( multiclass ) {
 
@@ -917,7 +931,8 @@ void SVM::InitializeDense(
 				present[ m_trainingLabels[ ii ] ] = true;
 			for ( unsigned int ii = 0; ii < m_classes; ++ii )
 				if ( ! present[ ii ] )
-					throw std::runtime_error( "at least one example of each label in {0,1,...,max} must be present in training set" );
+					if( initClassification)
+						throw std::runtime_error( "at least one example of each label in {0,1,...,max} must be present in training set" );
 		}
 		else {
 
@@ -938,7 +953,8 @@ void SVM::InitializeDense(
 				}
 			}
 			if ( ( ! present[ 0 ] ) || ( ! present[ 1 ] ) )
-				throw std::runtime_error( "at least one positive and negative example must be present in training set" );
+				if( initClassification)
+					throw std::runtime_error( "at least one positive and negative example must be present in training set" );
 		}
 
 		m_trainingVectorNormsSquared       = boost::shared_array< float >( new float[ m_rows ] );
@@ -1139,7 +1155,7 @@ void SVM::Save( char const* const filename ) const {
 }
 
 
-void SVM::Shrink( bool const smallClusters, unsigned int const activeClusters ) {
+void SVM::ShrinkClassfication( bool const smallClusters, unsigned int const activeClusters ) {
 
 	if ( ! m_initializedHost )
 		throw std::runtime_error( "SVM has not been initialized" );
@@ -1201,6 +1217,60 @@ void SVM::Shrink( bool const smallClusters, unsigned int const activeClusters ) 
 						trainingAlphas[    kk * m_classes + jj ] = m_trainingAlphas[    ii * m_classes + jj ];
 					}
 				}
+				++kk;
+			}
+		}
+		BOOST_ASSERT( kk == rows );
+	}
+
+	m_rows = rows;
+	m_trainingVectors                  = trainingVectors;
+	m_trainingLabels                   = trainingLabels;
+	m_trainingVectorNormsSquared       = trainingVectorNormsSquared;
+	m_trainingVectorKernelNormsSquared = trainingVectorKernelNormsSquared;
+	m_trainingResponses                = trainingResponses;
+	m_trainingAlphas                   = trainingAlphas;
+
+	ClusterTrainingVectors( smallClusters, activeClusters );
+}
+
+void SVM::ShrinkRegression( bool const smallClusters, unsigned int const activeClusters ) {
+
+	if ( ! m_initializedHost )
+		throw std::runtime_error( "SVM has not been initialized" );
+
+	DeinitializeDevice();
+	BOOST_ASSERT( m_updatedResponses );
+
+	m_clusterIndices.clear();
+	m_clusterNonzeroIndices.clear();
+
+	unsigned int nsample = m_rows/2;
+	unsigned int rows = 0;
+	for ( unsigned int ii = 0; ii < nsample; ++ii ) {
+		if ( m_trainingAlphas[ ii ] != 0 || m_trainingAlphas[ ii + nsample ] != 0)
+			++rows;
+	}
+
+	boost::shared_array< SparseVector > trainingVectors( new SparseVector[ rows ] );
+	boost::shared_array< boost::int32_t > trainingLabels( new boost::int32_t[ rows ] );
+	boost::shared_array< float > trainingVectorNormsSquared( new float[ rows ] );
+	boost::shared_array< float > trainingVectorKernelNormsSquared( new float[ rows ] );
+	boost::shared_array< double > trainingResponses( new double[ rows  ] );
+	boost::shared_array< float > trainingAlphas( new float[ rows ] );
+
+	{	unsigned int kk = 0;
+		for ( unsigned int ii = 0; ii < nsample; ++ii ) {
+
+			if ( m_trainingAlphas[ ii ] != 0 || m_trainingAlphas[ ii + nsample ] != 0)
+			{
+				trainingVectors[                  kk ] = m_trainingVectors[                  ii ];
+				trainingLabels[                   kk ] = m_trainingLabels[                   ii ];
+				trainingVectorNormsSquared[       kk ] = m_trainingVectorNormsSquared[       ii ];
+				trainingVectorKernelNormsSquared[ kk ] = m_trainingVectorKernelNormsSquared[ ii ];
+				trainingResponses[                kk ] = m_trainingResponses[                ii ];
+				trainingAlphas[                   kk ] = - m_trainingAlphas[ ii + nsample ] + m_trainingAlphas[ ii ];
+
 				++kk;
 			}
 		}
@@ -1287,6 +1357,11 @@ void SVM::DeinitializeDevice() {
 			CUDA_VERIFY( "Failed to free training labels on device", cudaFree( m_deviceTrainingLabels ) );
 			m_deviceTrainingLabels = NULL;
 		}
+		if ( m_deviceTrainingLterms != NULL ) {
+
+			CUDA_VERIFY( "Failed to free training lterms on device", cudaFree( m_deviceTrainingLterms ) );
+			m_deviceTrainingLterms = NULL;
+		}
 		if ( m_deviceTrainingVectorNormsSquared != NULL ) {
 
 			CUDA_VERIFY( "Failed to free training vector squared norms on device", cudaFree( m_deviceTrainingVectorNormsSquared ) );
@@ -1342,6 +1417,7 @@ void SVM::Deinitialize() {
 
 	m_trainingVectors = boost::shared_array< SparseVector >();
 	m_trainingLabels = boost::shared_array< boost::int32_t >();
+	m_trainingLterms = boost::shared_array< float >();
 	m_trainingVectorNormsSquared = boost::shared_array< float >();
 	m_trainingVectorKernelNormsSquared = boost::shared_array< float >();
 
@@ -1541,6 +1617,11 @@ void SVM::GetAlphas(
 	);
 }
 
+
+void SVM::SetBias(CUDA_FLOAT_DOUBLE bias)
+{
+	m_bias = bias;
+}
 
 void SVM::SetAlphas(
 	void const* const trainingAlphas,
@@ -1907,6 +1988,7 @@ std::pair< CUDA_FLOAT_DOUBLE, CUDA_FLOAT_DOUBLE > const SVM::Optimize( unsigned 
 			m_workSize,
 			m_regularization
 		);
+
 		CUDA_VERIFY(
 			"Failed to copy bias numerator from device",
 			cudaMemcpy(
@@ -2194,6 +2276,7 @@ void SVM::ClassifyDense(
 				classifications[ ( ii + jj ) * m_classes + kk ] = m_batchResponses[ kk * 16 + jj ];
 	}
 
+Rprintf("m_bias=%f\n", m_bias);
 	if ( m_biased ) {
 
 		CUDA_FLOAT_DOUBLE* ii    = classifications.get();
@@ -2222,6 +2305,7 @@ void SVM::Cleanup() {
 		CUDA_VERIFY( "Failed to free found keys on host", cudaFreeHost( m_foundKeys ) );
 		m_foundKeys = NULL;
 	}
+
 	if ( m_foundValues != NULL ) {
 
 		CUDA_VERIFY( "Failed to free found values on host", cudaFreeHost( m_foundValues ) );
@@ -2233,6 +2317,7 @@ void SVM::Cleanup() {
 		CUDA_VERIFY( "Failed to free batch squared norms on host", cudaFreeHost( m_batchVectorNormsSquared ) );
 		m_batchVectorNormsSquared = NULL;
 	}
+
 	if ( m_deviceBatchVectorNormsSquared != NULL ) {
 
 		CUDA_VERIFY( "Failed to free batch squared norms on device", cudaFree( m_deviceBatchVectorNormsSquared ) );
@@ -2447,6 +2532,37 @@ void SVM::InitializeDevice() {
 		);
 
 		CUDA_VERIFY( "Failed to free training labels on host", cudaFreeHost( trainingLabels ) );
+	}
+
+	CUDA_VERIFY(
+		"Failed to allocate space for training lterms on device",
+		cudaMalloc( reinterpret_cast< void** >( &m_deviceTrainingLterms ), ( m_clusters << m_logMaximumClusterSize ) * sizeof( float ) )
+	);
+	{	float* trainingLterms;
+		CUDA_VERIFY(
+			"Failed to allocate space for training lterms on host",
+			cudaMallocHost( &trainingLterms, ( m_clusters << m_logMaximumClusterSize ) * sizeof( float ) )
+		);
+
+		for ( unsigned int ii = 0; ii < m_clusters; ++ii ) {
+
+			unsigned int const size = m_clusterIndices[ ii ].size();
+			for ( unsigned int jj = 0; jj < size; ++jj )
+				trainingLterms[ ( ii << m_logMaximumClusterSize ) + jj ] = m_trainingLterms[ m_clusterIndices[ ii ][ jj ] ];
+			for ( unsigned int jj = size; jj < ( 1u << m_logMaximumClusterSize ); ++jj )
+				trainingLterms[ ( ii << m_logMaximumClusterSize ) + jj ] = 0;
+		}
+		CUDA_VERIFY(
+			"Failed to copy training labels to device",
+			cudaMemcpy(
+				m_deviceTrainingLterms,
+				trainingLterms,
+				( m_clusters << m_logMaximumClusterSize ) * sizeof( float ),
+				cudaMemcpyHostToDevice
+			)
+		);
+
+		CUDA_VERIFY( "Failed to free training labels on host", cudaFreeHost( trainingLterms ) );
 	}
 
 	CUDA_VERIFY(
@@ -2715,6 +2831,7 @@ void SVM::InitializeDevice() {
 
 			clusterHeaders[ ii ].responses = m_deviceTrainingResponses + ( ( ii * m_classes ) << m_logMaximumClusterSize );
 			clusterHeaders[ ii ].labels = m_deviceTrainingLabels + ( ii << m_logMaximumClusterSize );
+			clusterHeaders[ ii ].lterms = m_deviceTrainingLterms + ( ii << m_logMaximumClusterSize );
 			clusterHeaders[ ii ].alphas = m_deviceTrainingAlphas + ( ( ii * m_classes ) << m_logMaximumClusterSize );
 
 			clusterHeaders[ ii ].nonzeroIndices = pDeviceNonzeroIndices;
@@ -2962,7 +3079,11 @@ bool const SVM::IterateUnbiasedBinary() {
 				unsigned int const batchIndex = m_batchIndices[ jj ];
 				unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 				float const sign = ( ( m_trainingLabels[ unclusteredIndex ] > 0 ) ? 1.0f : -1.0f );
-				double const gradient = 1 - sign * m_batchResponses[ jj ];
+				//double const gradient = 1 - sign * m_batchResponses[ jj ];
+
+				float const lterm = m_trainingLterms[ unclusteredIndex ];
+				double const gradient = lterm - sign * m_batchResponses[ jj ];
+
 				double const scale = m_batchSubmatrix[ ( jj << 4 ) + jj ];
 
 				double newAlpha = m_batchAlphas[ jj ] + gradient / scale;
@@ -3083,6 +3204,7 @@ bool const SVM::IterateBiasedBinary() {
 		m_regularization
 	);
 	std::copy( m_foundValues, m_foundValues + 16, m_foundIndices );
+
 	CUDA::SparseKernelFindLargestNegativeGradient(
 		m_foundKeys,
 		m_foundValues,
@@ -3237,6 +3359,7 @@ bool const SVM::IterateBiasedBinary() {
 		unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 		m_batchAlphas[ ii ] = m_trainingAlphas[ unclusteredIndex ];
 	}
+
 	for ( unsigned int ii = 0; ii < 16; ++ii ) {
 
 		unsigned int bestIndex1 = 0;
@@ -3246,7 +3369,10 @@ bool const SVM::IterateBiasedBinary() {
 				unsigned int const batchIndex = m_batchIndices[ jj ];
 				unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 				float const sign = ( ( m_trainingLabels[ unclusteredIndex ] > 0 ) ? 1.0f : -1.0f );
-				double const gradient = 1 - sign * m_batchResponses[ jj ];
+				//double const gradient = 1 - sign * m_batchResponses[ jj ];
+
+				float const lterm = m_trainingLterms[ unclusteredIndex ];
+				double const gradient = lterm - sign * m_batchResponses[ jj ];
 
 				float score = std::abs( gradient );
 				if ( ( gradient > 0 ) && ( ! ( m_batchAlphas[ jj ] < m_regularization ) ) )
@@ -3264,6 +3390,7 @@ bool const SVM::IterateBiasedBinary() {
 		unsigned int const batchIndex1 = m_batchIndices[ bestIndex1 ];
 		unsigned int const unclusteredIndex1 = m_clusterIndices[ batchIndex1 >> m_logMaximumClusterSize ][ batchIndex1 & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 		float const sign1 = ( ( m_trainingLabels[ unclusteredIndex1 ] > 0 ) ? 1.0f : -1.0f );
+		float const lterm1 = m_trainingLterms[ unclusteredIndex1 ];
 
 		double alpha1 = std::numeric_limits< double >::quiet_NaN();
 		double alpha2 = std::numeric_limits< double >::quiet_NaN();
@@ -3278,11 +3405,13 @@ bool const SVM::IterateBiasedBinary() {
 					unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 					float const sign = ( ( m_trainingLabels[ unclusteredIndex ] > 0 ) ? 1.0f : -1.0f );
 
+					float const lterm = m_trainingLterms[ unclusteredIndex ];
+
 					double const k11 = m_batchSubmatrix[ ( bestIndex1 << 4 ) + bestIndex1 ];
 					double const k22 = m_batchSubmatrix[ ( jj << 4 ) + jj ];
 					double const k12 = m_batchSubmatrix[ ( bestIndex1 << 4 ) + jj ];
 					double delta = (
-						( ( sign1 - sign ) - ( m_batchResponses[ bestIndex1 ] - m_batchResponses[ jj ] ) ) /
+						(  ( sign1*lterm1 - sign*lterm ) - ( m_batchResponses[ bestIndex1 ] - m_batchResponses[ jj ] ) ) /
 						std::max( k11 + k22 - 2 * k12, static_cast< double >( std::numeric_limits< float >::epsilon() ) )
 					);
 
@@ -3319,7 +3448,7 @@ bool const SVM::IterateBiasedBinary() {
 					}
 
 					double const score = (
-						( ( sign1 - sign ) - ( m_batchResponses[ bestIndex1 ] - m_batchResponses[ jj ] ) ) * delta -
+						( ( sign1*lterm1 - sign*lterm ) - ( m_batchResponses[ bestIndex1 ] - m_batchResponses[ jj ] ) ) * delta -
 						0.5 * Square( delta ) * ( k11 + k22 - 2 * k12 )
 					);
 
@@ -3353,6 +3482,7 @@ bool const SVM::IterateBiasedBinary() {
 			m_batchAlphas[ bestIndex2 ] = alpha2;
 		}
 	}
+
 	for ( unsigned int ii = 0; ii < 16; ++ii ) {
 
 		unsigned int const batchIndex = m_batchIndices[ ii ];
