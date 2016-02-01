@@ -74,7 +74,7 @@ svm.default <- function (x,
           na.action = na.omit)
 {
     library(bit64);
-    
+
     if(inherits(x, "Matrix")) {
         library("SparseM")
         library("Matrix")
@@ -365,14 +365,14 @@ cross_validation <- function ( y, x, param )
 		idx.cross <- c(breaks[i]:breaks[i+1]);
 		if( param$type == C_CLASSFICATION)
 		{
-			sret <- gtsvmtrain.classfication.call( y[ -idx.cross ], x[ -idx.cross,], param, final.result=TRUE, verbose=FALSE );
+			sret <- gtsvmtrain.classfication.call( y[ -idx.cross ], x[ -idx.cross,], param, final.result=TRUE, verbose=FALSE, ignoreNoProgress=TRUE );
 			pret <- gtsvmpredict.classfication.call( x[ idx.cross,], param$sparse, sret, verbose=FALSE );
 
 			if( sret$nclasses==2 )
 				y.v [idx.cross] <- levels(y)[as.factor(pret$ret)]
 			else
 			{
-				ret2 <- matrix( ret$dec[ 1:(length(idx.cross)*param$nclass) ], 
+				ret2 <- matrix( pret$dec[ 1:(length(idx.cross)*param$nclass) ], 
 								nrow = length(idx.cross), ncol= param$nclass  );
 				y.v [idx.cross] <- apply(ret2, 1, which.max);
 			}
@@ -382,7 +382,7 @@ cross_validation <- function ( y, x, param )
 		
 		if( param$type == EPSILON_SVR)
 		{
-			sret <- gtsvmtrain.regression.call( y[ -idx.cross ], x[ -idx.cross,], param, final.result=TRUE, verbose=FALSE );
+			sret <- gtsvmtrain.regression.call( y[ -idx.cross ], x[ -idx.cross,], param, final.result=TRUE, verbose=FALSE, ignoreNoProgress=TRUE );
 			pret <- gtsvmpredict.regression.call( x[ idx.cross,], param$sparse, sret, verbose=FALSE);
 			
 			y.v [idx.cross] <- pret$ret;
@@ -620,7 +620,7 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
             names(lis)[1:2] <- colnames(sub);
             new <- expand.grid(lis)[, labels(terms(x))];
             preds <- predict(x, new);
-browser();
+
             filled.contour(xr, yr,
                            matrix(as.numeric(preds),
                                   nrow = length(xr), byrow = TRUE),

@@ -1,4 +1,6 @@
-gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose=TRUE)
+trim.space <- function (x) gsub("^\\s+|\\s+$", "", x)
+
+gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose=TRUE, ignoreNoProgress=FALSE)
 {
 	y.org <- y;
 	y.idx <- c();
@@ -21,6 +23,9 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
     # GTSVM only support the un-biased classification for mulri-class.
     if (param$nclass>2) param$biased<-FALSE;
    
+	if( sys.nframe()> 6  && as.character( as.list(sys.call(-5))[[1]])=="tune" ) 
+		ignoreNoProgress <- TRUE;
+	
     cret <- .C ("gtsvmtrain_classfication",
                 ## data
                 as.double  (if (param$sparse) x@ra else x),
@@ -72,13 +77,18 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 		        totalIter= integer  (1),
 
                 coefs    = double   (nr * param$nclass ),
+
+				as.integer(ignoreNoProgress),
                 as.integer(verbose),
                 error    = err,
                 PACKAGE  = "Rgtsvm");
 
     t.elapsed <- proc.time() - ptm;      
 
-    if ( cret$error != empty_string )
+    #if ( cret$error != empty_string )
+    #    stop(paste(cret$error, "!", sep=""))
+    
+    if ( trim.space(cret$error) != "" )
         stop(paste(cret$error, "!", sep=""))
 	
 	cret$t.elapsed <- t.elapsed; 
@@ -132,7 +142,7 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
 	y.train <- obj.train$y.SV
     if( obj.train$nclass==2 )
 		y.train <- as.integer( c(-1, 1)[y.train] );
-		
+
     cret <- .C ("gtsvmpredict_classfication",
                as.integer (param$decision.values),
                as.integer (param$probability),
@@ -176,7 +186,10 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
                error   = err,
                PACKAGE = "Rgtsvm");
 
-    if ( cret$error != empty_string )
+    ##if ( cret$error != empty_string )
+    ##    stop(paste(cret$error, "!", sep=""))
+    
+    if ( trim.space(cret$error) != "" )
         stop(paste(cret$error, "!", sep=""))
 
 	cret$t.elapsed <- proc.time() - ptm;
@@ -186,7 +199,7 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
 	return(cret);
 }
 
-gtsvmtrain.regression.call<-function(y1, x1, param, final.result=FALSE, verbose=TRUE)
+gtsvmtrain.regression.call<-function(y1, x1, param, final.result=FALSE, verbose=TRUE, ignoreNoProgress=FALSE)
 {
 	x <- rbind(x1, x1);
 	y <- c(y1, y1);
@@ -196,6 +209,9 @@ gtsvmtrain.regression.call<-function(y1, x1, param, final.result=FALSE, verbose=
 
 	nr <- nrow(x);
     maxIter <- nr * 100;
+
+	if( sys.nframe()> 6  && as.character( as.list(sys.call(-5))[[1]])=="tune" ) 
+		ignoreNoProgress <- TRUE;
 
  	cret <- .C ("gtsvmtrain_epsregression",
                 ## data
@@ -243,14 +259,19 @@ gtsvmtrain.regression.call<-function(y1, x1, param, final.result=FALSE, verbose=
                 predict  = double   (nr),
                 coefs    = double(nr),
 
+				as.integer(ignoreNoProgress),
                 as.integer(verbose),
                 error    = err,
                 PACKAGE  = "Rgtsvm");
           
     t.elapsed <- proc.time() - ptm;      
 
-    if ( cret$error != empty_string )
+    ##if ( cret$error != empty_string )
+    ##    stop(paste(cret$error, "!", sep=""))
+
+    if ( trim.space(cret$error) != "" )
         stop(paste(cret$error, "!", sep=""))
+  
 	
 	cret$t.elapsed <- t.elapsed; 
 	cret$nclasses  <- 2;
@@ -349,9 +370,12 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
                error   = err,
                PACKAGE = "Rgtsvm");
 
-    if ( cret$error != empty_string )
-        stop(paste(cret$error, "!", sep=""))
+    #if ( cret$error != empty_string )
+    #    stop(paste(cret$error, "!", sep=""))
 
+    if ( trim.space(cret$error) != "" )
+        stop(paste(cret$error, "!", sep=""))
+    
 	cret$t.elapsed <- proc.time() - ptm;
 	
 	return(cret);

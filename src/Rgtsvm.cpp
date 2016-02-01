@@ -103,6 +103,7 @@ extern "C" void gtsvmtrain_epsregression (
 	       double *pPredict,
 			//# dont alpha value for each classes and support vector dim[nr, nclass-1]
 	       double *pTrainingAlphas,
+	       int    *pNoProgressIgnore,
 	       int    *pVerbose,
 	       char   **pszError)
 {
@@ -221,6 +222,14 @@ extern "C" void gtsvmtrain_epsregression (
 		_CATCH_EXCEPTIONS_
 
 		*npTotalIter = ii;
+
+		if(g_error && *pNoProgressIgnore && g_errorString == "An iteration made no progress" )
+		{
+			Rprintf("Warning: No convergent in the optimization process, ignore.\n");
+			strcpy( *pszError, "    ");
+			g_error = false;
+			break;
+		}
 
 		if(g_error) break;
 	}
@@ -531,6 +540,7 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 	       int    *npTotal_iter,
 			//# dont alpha value for each classes and support vector dim[nr, nclass-1]
 	       double *pTrainingAlphas,
+	       int    *pNoProgressIgnore,
 	       int    *pVerbose,
 	       char   **pszError)
 {
@@ -650,6 +660,14 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 		_CATCH_EXCEPTIONS_
 
 		*npTotal_iter = ii;
+
+		if(g_error && *pNoProgressIgnore && g_errorString == "An iteration made no progress" )
+		{
+			Rprintf("Warning: No convergent in the optimization process, ignore.\n");
+			strcpy( *pszError, "    ");
+			g_error = false;
+			break;
+		}
 
 		if(g_error) break;
 	}

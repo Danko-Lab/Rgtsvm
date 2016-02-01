@@ -22,4 +22,16 @@ plot(gt.eps3, data);
 load("training_x_y.RData");
 #gt.train   <- svm( dnase.vector~., training_x_y, gamma=0.00833, type="eps-regression");
 
-gt.train   <- svm( training_x_y[,-c(121)], training_x_y[,121]*10, gamma=0.00833, type="eps-regression", scale=TRUE);
+gt.train   <- svm( training_x_y[,-c(121)], training_x_y[,121], gamma=0.00833, type="eps-regression", scale=TRUE, fitted=FALSE);
+
+ptm <- proc.time();
+gt.test    <- predict(gt.train, training_x_y[,-c(121)] );
+t.elapsed <- proc.time() - ptm;      
+show(t.elapsed);
+
+library(e1071);
+ptm <- proc.time();
+svm.train   <- svm( training_x_y[,-c(121)], training_x_y[,121], gamma=0.00833, type="eps-regression", scale=TRUE, fitted=FALSE);
+t.elapsed <- proc.time() - ptm;      
+show(t.elapsed);
+
