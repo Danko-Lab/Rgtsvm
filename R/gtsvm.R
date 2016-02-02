@@ -2,6 +2,8 @@ trim.space <- function (x) gsub("^\\s+|\\s+$", "", x)
 
 gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose=TRUE, ignoreNoProgress=FALSE)
 {
+	verbose <- FALSE;
+
 	y.org <- y;
 	y.idx <- c();
 	for( y0 in sort(unique(y) ) )
