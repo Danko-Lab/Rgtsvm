@@ -511,7 +511,7 @@ predict.gtsvm <- function (object, newdata,
                                  "/", object$levels[object$labels[j]],
                                  sep = ""))
         attr(ret2, "decision.values") <-
-            napredict(act, matrix(ret$dec, nrow = nrow(newdata), byrow = TRUE, dimnames = list(rowns, colns) ) )
+            napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = TRUE, dimnames = list(rowns, colns) ) )
     }
 
     if (probability && object$type < 2) 
