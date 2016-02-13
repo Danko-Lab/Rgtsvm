@@ -95,12 +95,16 @@ struct SVM {
 	void InitializeDense(
 		void const* const trainingVectors,    // order depends on columnMajor flag
 		GTSVM_Type trainingVectorsType,
+		unsigned int const rows,
+		unsigned int const columns,
+		unsigned int const innerRows,
+		unsigned int const innerColumns,
+		unsigned int* trainingVectorRowIndex,
+		unsigned int* trainingVectorColIndex,
 		void const* const trainingLabels,
 		GTSVM_Type trainingLabelsType,
 		void const* const trainingLinearTerm,
 		GTSVM_Type trainingLinearTermType,
-		boost::uint32_t const rows,
-		boost::uint32_t const columns,
 		bool const columnMajor,
 		bool const multiclass,
 		float const regularization,
@@ -240,6 +244,10 @@ struct SVM {
 		GTSVM_Type vectorsType,
 		unsigned int const rows,
 		unsigned int const columns,
+		unsigned int const innerRows,
+		unsigned int const innerColumns,
+		unsigned int* pVecRowIndex,
+		unsigned int* pVecColIndex,
 		bool const columnMajor
 	);
 
@@ -265,6 +273,7 @@ private:
 	typedef std::vector< std::pair< unsigned int, float > > SparseVector;
 
 
+	bool m_predict;
 	bool m_constructed;
 	bool m_initializedHost;
 	bool m_initializedDevice;

@@ -8,13 +8,13 @@
 # Compilers
 EXT := cu
 
-NVCC := @NVCC@
-CXXFLAGS := @CXXFLAGS@
-NVCCFLAGS := @NCFLAGS@
-CFLAGS := @CFLAGS@
-NCFLAGS := @NCFLAGS@
-LDFLAGS := @LDFLAGS@
-LIBS := @LIBS@
+NVCC := /opt/apps/cuda/5.5/bin/nvcc
+CXXFLAGS := -O2 -funroll-loops -fomit-frame-pointer -ffast-math -I/opt/apps/cuda/5.5/include -I/opt/apps/gcc4_7/boost/1.55.0/include -I/home1/03350/tg826494/R/R-3.1.2/include -Wall -fPIC -D_GNU_SOURCE -m64
+NVCCFLAGS := -arch=sm_20 -O2 -I/opt/apps/cuda/5.5/include -I/opt/apps/gcc4_7/boost/1.55.0/include -DBOOST_NOINLINE='__attribute__((noinline))' -Xcompiler "-O2 -fpic -I/home1/03350/tg826494/R/R-3.1.2/include"
+CFLAGS := -std=gnu99 -O2 -funroll-loops -fomit-frame-pointer -ffast-math -I/opt/apps/cuda/5.5/include -I/opt/apps/gcc4_7/boost/1.55.0/include -I/home1/03350/tg826494/R/R-3.1.2/include -Wall -fPIC -D_GNU_SOURCE -m64
+NCFLAGS := -arch=sm_20 -O2 -I/opt/apps/cuda/5.5/include -I/opt/apps/gcc4_7/boost/1.55.0/include -DBOOST_NOINLINE='__attribute__((noinline))' -Xcompiler "-O2 -fpic -I/home1/03350/tg826494/R/R-3.1.2/include"
+LDFLAGS := -L/opt/apps/cuda/5.5/lib64
+LIBS := -lcuda -lcublas
 
 # Program-specifics
 TARGET := Rgtsvm.so

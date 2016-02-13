@@ -1,15 +1,15 @@
 Package: Rgtsvm
-Version: 0.2
-Date: 2016-01-29
+Version: 0.3
+Date: 2016-02-13
 Title: The SVM package for GPU architecture based on the GTSVM software and e1071 package.
-Imports: graphics, grDevices, class, bit64 
+Imports: graphics, grDevices, class, bit64, tools, methods
 Suggests: SparseM, Matrix
 Description: Training and prediction of SVM based on GTSVM are avalaible on GPU architecture.
 License: GPLv3
 LazyLoad: yes
-Packaged: 2015-07-25; Zhong Wang
+Packaged: 2016-02-13; Zhong Wang
 Author: Zhong Wang <zw355@cornell.edu>
 Maintainer: Zhong Wang <zw355@cornell.edu>
 NeedsCompilation: yes
 Repository: CRAN
-Date/Publication: 2016-01-29
+Date/Publication: 2016-02-13

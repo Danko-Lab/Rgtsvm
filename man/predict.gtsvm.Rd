@@ -5,7 +5,7 @@
   This function predicts values based upon a model trained by \code{svm} in package \emph{Rgtsvm}.
 }
 \usage{
-\method{predict}{gtsvm}(object, newdata, score = FALSE, ..., na.action = na.omit)
+\method{predict}{gtsvm}(object, newdata, ..., na.action = na.omit)
 }
 
 \arguments{

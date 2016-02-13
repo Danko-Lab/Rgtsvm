@@ -2,18 +2,28 @@ useDynLib(Rgtsvm)
 
 import(graphics)
 import(grDevices)
+import(tools)
+import(methods)
+import(bit64);
 
+exportClasses("BigMatrix.refer")
+
+export(lsos)
 export(load.svmlight)
 export(svm)
+
+export(attach.bigmatrix)
+export(load.bigmatrix)
+
 export(predict.gtsvm)
 export(print.gtsvm)
 export(tune.svm)
+
 export(tune.control)
 export(plot.tune)
 export(summary.tune)
 export(print.tune)
 export(print.summary.tune)
-
 
 S3method(summary, gtsvm)
 S3method(plot, gtsvm)

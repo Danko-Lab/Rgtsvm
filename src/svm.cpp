@@ -235,33 +235,41 @@ static inline void SVM_Memcpy2d( t_Type* const destination, void const* const so
 
 
 template< typename t_DestinationType, typename t_SourceType >
-static inline void SVM_SparseMemcpy2d_Helper( std::vector< std::pair< unsigned int, t_DestinationType > >* const destination, t_SourceType const* const source, size_t const rows, size_t const columns, bool const transpose ) {
+static inline void SVM_SparseMemcpy2d_Helper( std::vector< std::pair< unsigned int, t_DestinationType > >* const destination, t_SourceType const* const source, size_t const rows, size_t const columns, size_t const innerRows, size_t const innerColumns,unsigned int* const source_rowindex,  unsigned int* const source_colindex, bool const transpose ) {
+
+	unsigned int index = 0;
+	unsigned int xrow = 0;
 
 	if ( transpose ) {
 
-		for ( unsigned int ii = 0; ii < rows; ++ii ) {
+		boost::shared_array< unsigned int > pOffset( new unsigned int[ columns ] );
+		for(unsigned int kk=0; kk < columns; kk++)
+			pOffset[kk] = innerRows * source_colindex[kk] ;
 
-			unsigned int index = ii;
+		for ( unsigned int ii = 0; ii < rows; ++ii ) {
+			xrow = source_rowindex[ii];
+
 			for ( unsigned int jj = 0; jj < columns; ++jj ) {
+				index = xrow + pOffset[jj];
 
 				t_DestinationType const value = SVM_ConvertHelper< t_DestinationType >::Convert( source[ index ] );
 				if ( value != 0 )
 					destination[ ii ].push_back( std::pair< unsigned int, t_DestinationType >( jj, value ) );
-				index += rows;
 			}
 		}
 	}
 	else {
 
-		unsigned int index = 0;
-		for ( unsigned int ii = 0; ii < rows; ++ii ) {
-
-			for ( unsigned int jj = 0; jj < columns; ++jj ) {
+		for ( unsigned int ii = 0; ii < rows; ++ii )
+		{
+			unsigned int xrow_offset = source_rowindex[ii] * innerColumns;
+			for ( unsigned int jj = 0; jj < columns; ++jj )
+			{
+				index = xrow_offset + source_colindex[jj] ;
 
 				t_DestinationType const value = SVM_ConvertHelper< t_DestinationType >::Convert( source[ index ] );
 				if ( value != 0 )
 					destination[ ii ].push_back( std::pair< unsigned int, t_DestinationType >( jj, value ) );
-				++index;
 			}
 		}
 	}
@@ -269,20 +277,20 @@ static inline void SVM_SparseMemcpy2d_Helper( std::vector< std::pair< unsigned i
 
 
 template< typename t_Type >
-static inline void SVM_SparseMemcpy2d( std::vector< std::pair< unsigned int, t_Type > >* const destination, void const* const source, GTSVM_Type const type, size_t const rows, size_t const columns, bool const transpose = false ) {
+static inline void SVM_SparseMemcpy2d( std::vector< std::pair< unsigned int, t_Type > >* const destination, void const* const source, GTSVM_Type const type, size_t const rows, size_t const columns, size_t const innerRows, size_t const innerColumns, unsigned int* const source_rowindex,  unsigned int* const source_colindex, bool const transpose = false ) {
 
 	switch( type ) {
-		case GTSVM_TYPE_BOOL:   SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< bool const*            >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_FLOAT:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< float const*           >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_DOUBLE: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< double const*          >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_INT8:   SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int8_t const*   >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_INT16:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int16_t const*  >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_INT32:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int32_t const*  >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_INT64:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int64_t const*  >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_UINT8:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint8_t const*  >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_UINT16: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint16_t const* >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_UINT32: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint32_t const* >( source ), rows, columns, transpose ); break;
-		case GTSVM_TYPE_UINT64: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint64_t const* >( source ), rows, columns, transpose ); break;
+		case GTSVM_TYPE_BOOL:   SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< bool const*            >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_FLOAT:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< float const*           >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_DOUBLE: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< double const*          >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_INT8:   SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int8_t const*   >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_INT16:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int16_t const*  >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_INT32:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int32_t const*  >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_INT64:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::int64_t const*  >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_UINT8:  SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint8_t const*  >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_UINT16: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint16_t const* >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_UINT32: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint32_t const* >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
+		case GTSVM_TYPE_UINT64: SVM_SparseMemcpy2d_Helper( destination, reinterpret_cast< boost::uint64_t const* >( source ), rows, columns, innerRows, innerColumns, source_rowindex, source_colindex, transpose ); break;
 		default: throw std::runtime_error( "Unknown type" );
 	}
 }
@@ -643,34 +651,34 @@ static inline void SVM_SparseSparseReverseMemcpy2d( void* const destination, siz
 
 
 template< typename t_DestinationType, typename t_SourceType >
-static inline void SVM_MemcpyStride_Helper( t_DestinationType* const destination, size_t const destinationStride, t_SourceType const* const source, size_t const sourceStride, size_t const count ) {
+static inline void SVM_MemcpyStride_Helper( t_DestinationType* const destination, size_t const destinationStride, t_SourceType const* const source, size_t const sourceStride, size_t const count, unsigned int* pVecColIndex ) {
 
 	t_DestinationType* pDestination = destination;
-	t_SourceType const* pSource = source;
+
 	for ( unsigned int ii = 0; ii < count; ++ii ) {
+		t_SourceType const* pSource = source + pVecColIndex[ii]*sourceStride;
 
 		*pDestination = SVM_ConvertHelper< t_DestinationType >::Convert( *pSource );
 		pDestination += destinationStride;
-		pSource += sourceStride;
 	}
 }
 
 
 template< typename t_Type >
-static inline void SVM_MemcpyStride( t_Type* const destination, size_t const destinationStride, void const* const source, size_t const sourceOffset, size_t const sourceStride, GTSVM_Type const type, size_t const count ) {
+static inline void SVM_MemcpyStride( t_Type* const destination, size_t const destinationStride, void const* const source, size_t const sourceOffset, size_t const sourceStride, GTSVM_Type const type, size_t const count, unsigned int* pVecColIndex  ) {
 
 	switch( type ) {
-		case GTSVM_TYPE_BOOL:   SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< bool const*            >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_FLOAT:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< float const*           >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_DOUBLE: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< double const*          >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_INT8:   SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int8_t const*   >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_INT16:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int16_t const*  >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_INT32:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int32_t const*  >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_INT64:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int64_t const*  >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_UINT8:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint8_t const*  >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_UINT16: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint16_t const* >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_UINT32: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint32_t const* >( source ) + sourceOffset, sourceStride, count ); break;
-		case GTSVM_TYPE_UINT64: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint64_t const* >( source ) + sourceOffset, sourceStride, count ); break;
+		case GTSVM_TYPE_BOOL:   SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< bool const*            >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_FLOAT:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< float const*           >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_DOUBLE: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< double const*          >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_INT8:   SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int8_t const*   >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_INT16:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int16_t const*  >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_INT32:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int32_t const*  >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_INT64:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::int64_t const*  >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_UINT8:  SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint8_t const*  >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_UINT16: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint16_t const* >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_UINT32: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint32_t const* >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
+		case GTSVM_TYPE_UINT64: SVM_MemcpyStride_Helper( destination, destinationStride, reinterpret_cast< boost::uint64_t const* >( source ) + sourceOffset, sourceStride, count, pVecColIndex ); break;
 		default: throw std::runtime_error( "Unknown type" );
 	}
 }
@@ -787,6 +795,8 @@ void SVM::InitializeSparse(
 	BOOST_ASSERT( ! m_initializedHost );
 	m_initializedHost = true;
 
+	m_predict = !initClassification;
+
 	try {
 
 		m_rows = rows;
@@ -795,7 +805,10 @@ void SVM::InitializeSparse(
 		m_trainingVectors = boost::shared_array< SparseVector >( new SparseVector[ m_rows ] );
 		m_trainingLabels = boost::shared_array< boost::int32_t >( new boost::int32_t[ m_rows ] );
 		SVM_SparseSparseMemcpy2d( m_trainingVectors.get(), trainingVectors, trainingVectorIndices, trainingVectorOffsets, trainingVectorsType, m_rows, m_columns, columnMajor );
-		SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
+		if (trainingLabels!=NULL)
+			SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
+		else
+			std::fill( m_trainingLabels.get(), m_trainingLabels.get() + m_rows, 1.0f );
 
 		m_trainingLterms = boost::shared_array< float >( new float[ m_rows ] );
 		SVM_Memcpy( m_trainingLterms.get(), trainingLterms, 0, trainingLinearTermType, m_rows );
@@ -869,12 +882,16 @@ void SVM::InitializeSparse(
 void SVM::InitializeDense(
 	void const* const trainingVectors,    // order depends on columnMajor flag
 	GTSVM_Type trainingVectorsType,
+	unsigned int const rows,
+	unsigned int const columns,
+	unsigned int const innerRows,
+	unsigned int const innerColumns,
+	unsigned int* trainingVectorRowIndex,
+	unsigned int* trainingVectorColIndex,
 	void const* const trainingLabels,
 	GTSVM_Type trainingLabelsType,
 	void const* const trainingLterms,
 	GTSVM_Type trainingLinearTermType,
-	boost::uint32_t const rows,
-	boost::uint32_t const columns,
 	bool const columnMajor,
 	bool const multiclass,
 	float const regularization,
@@ -896,6 +913,8 @@ void SVM::InitializeDense(
 	BOOST_ASSERT( ! m_initializedHost );
 	m_initializedHost = true;
 
+	m_predict = !initClassification;
+
 	try {
 
 		m_rows = rows;
@@ -903,8 +922,13 @@ void SVM::InitializeDense(
 
 		m_trainingVectors = boost::shared_array< SparseVector >( new SparseVector[ m_rows ] );
 		m_trainingLabels = boost::shared_array< boost::int32_t >( new boost::int32_t[ m_rows ] );
-		SVM_SparseMemcpy2d( m_trainingVectors.get(), trainingVectors, trainingVectorsType, m_rows, m_columns, columnMajor );
-		SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
+
+		SVM_SparseMemcpy2d( m_trainingVectors.get(), trainingVectors, trainingVectorsType, m_rows, m_columns, innerRows, innerColumns, trainingVectorRowIndex, trainingVectorColIndex, columnMajor );
+
+		if( trainingLabels != NULL)
+			SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
+		else
+			std::fill( m_trainingLabels.get(), m_trainingLabels.get() + m_rows, 1.0f );
 
 		m_trainingLterms = boost::shared_array< float >( new float[ m_rows ] );
 		SVM_Memcpy( m_trainingLterms.get(), trainingLterms, 0, trainingLinearTermType, m_rows );
@@ -1757,7 +1781,7 @@ void SVM::Recalculate() {
 	}
 	m_updatedResponses = true;
 
-	if ( m_biased ) {
+	if ( m_biased && !m_predict) {
 
 		if ( m_classes != 1 )
 			throw std::runtime_error( "Multiclass is only implemented for problems without an unregularized bias" );
@@ -2192,6 +2216,10 @@ void SVM::ClassifyDense(
 	GTSVM_Type vectorsType,
 	unsigned int const rows,
 	unsigned int const columns,
+	unsigned int const innerRows,
+	unsigned int const innerColumns,
+	unsigned int* pVecRowIndex,
+	unsigned int* pVecColIndex,
 	bool const columnMajor
 )
 {
@@ -2211,9 +2239,9 @@ void SVM::ClassifyDense(
 		for ( unsigned int jj = 0; jj < batchSize; ++jj ) {
 
 			if ( columnMajor )
-				SVM_MemcpyStride( m_batchVectorsTranspose + jj, 16, vectors, ii + jj, rows, vectorsType, std::min( columns, m_columns ) );
+				SVM_MemcpyStride( m_batchVectorsTranspose + jj, 16, vectors, pVecRowIndex[ ii + jj ], innerRows, vectorsType, std::min( columns, m_columns ), pVecColIndex );
 			else
-				SVM_MemcpyStride( m_batchVectorsTranspose + jj, 16, vectors, ( ii + jj ) * m_columns, 1, vectorsType, std::min( columns, m_columns ) );
+				SVM_MemcpyStride( m_batchVectorsTranspose + jj, 16, vectors, pVecRowIndex[ ii + jj ] * innerColumns, 1, vectorsType, std::min( columns, m_columns ), pVecColIndex );
 
 			for ( unsigned int kk = columns; kk < m_columns; ++kk )
 				m_batchVectorsTranspose[ ( kk << 4 ) + jj ] = 0;
@@ -2276,7 +2304,9 @@ void SVM::ClassifyDense(
 				classifications[ ( ii + jj ) * m_classes + kk ] = m_batchResponses[ kk * 16 + jj ];
 	}
 
-Rprintf("m_bias=%f\n", m_bias);
+
+// ("m_bias=%f\n", m_bias);
+
 	if ( m_biased ) {
 
 		CUDA_FLOAT_DOUBLE* ii    = classifications.get();

@@ -25,6 +25,7 @@
 
 #include "headers.hpp"
 #include <R.h>
+#include <Rinternals.h>
 #include <Rdefines.h>
 
 #define  DEF_BIASED true
@@ -50,20 +51,24 @@
 #define _CHECK_EXCEPTIONS_ \
 	if(g_error) \
 	{ \
-		strcpy( *pszError, g_errorString.c_str() ); \
+		*pnError = 1; \
 		Rprintf("Error: %s", g_errorString.c_str()); \
 		return; \
 	}
 
 
 extern "C" void gtsvmtrain_epsregression (
+	       int    *pSparse,
 		   double *pX,
-		   int    *pXrow,
-		   int 	  *pXcol,
-	       double *pY,
 	       int    *pVecOffset,// start from 0
 	       int 	  *pVecIndex, // start from 1
-	       int    *pSparse,
+		   int    *pXrow,
+		   int 	  *pXcol,
+		   int    *pXInnerRow,
+		   int 	  *pXInnerCol,
+	       int    *pXRowIndex,
+	       int    *pXColIndex,
+	       double *pY,
 
 	       int    *pKernelType,
 	       // KernelParameter3 <==> degree in libsvm
@@ -77,9 +82,10 @@ extern "C" void gtsvmtrain_epsregression (
 	       double *pTolerance,
 	       double *pEpsilon,
 	       int    *pShrinking,
-	       int    *pProbability,
 	       int    *pFitted,
 	       int    *pMaxIter,
+	       int    *pNoProgressIgnore,
+
 			//output variables
 			//# total iteration
 	       int    *npTotalIter,
@@ -91,26 +97,22 @@ extern "C" void gtsvmtrain_epsregression (
 	       int    *pLabels,
 			//# the support vectors of each classes
 	       int    *pSVofclass,
-			//# dont know
+			//# - m_bias
 	       double *pRho,
-			//# dont know
-	       double *pSigma,
-			//# dont know
-	       double *pProbA,
-			//# dont know
-	       double *pProbB,
-	       //# prdict labels for the fitted option
-	       double *pPredict,
 			//# dont alpha value for each classes and support vector dim[nr, nclass-1]
 	       double *pTrainingAlphas,
-	       int    *pNoProgressIgnore,
+	       //# prdict labels for the fitted option
+	       double *pPredict,
+
 	       int    *pVerbose,
-	       char   **pszError)
+	       int    *pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
 	bool g_error = false;
 	std::string g_errorString;
+
+	*pnError = 0;
 
 	bool biased = DEF_BIASED;
 	bool columnMajor = DEF_COLUMN_MAJOR;
@@ -130,7 +132,11 @@ extern "C" void gtsvmtrain_epsregression (
 		kernelParameter3 = 1;
 	}
 
-	Rprintf("pKernel_type=%d sparse=%d[%d,%d] \n", *pKernelType, *pSparse, *pXrow, *pXcol );
+	char szSparse=' ';
+	if(*pSparse) szSparse='S';
+
+	Rprintf("[e-SVR training] X = [%d,%d%c] kernel = %d degree = %f gamma = %f, c0 = %f C = %f\n",
+			*pXrow, *pXcol, szSparse, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	unsigned int nSample = (*pXrow)/2;
 	boost::shared_array< float > pLinearTerm( new float[ *pXrow ] );
@@ -177,12 +183,16 @@ extern "C" void gtsvmtrain_epsregression (
 		psvm->InitializeDense(
 			(void*)pX,
 			GTSVM_TYPE_DOUBLE,
+			(unsigned int)*pXrow,
+			(unsigned int)*pXcol,
+			(unsigned int)*pXInnerRow,
+			(unsigned int)*pXInnerCol,
+			(unsigned int*)pXRowIndex,
+			(unsigned int*)pXColIndex,
 			(void*)pLabelY.get(),
 			GTSVM_TYPE_DOUBLE,
 			(void*)pLinearTerm.get(),
 			GTSVM_TYPE_FLOAT,
-			(unsigned int)*pXrow,
-			(unsigned int)*pXcol,
 			columnMajor,
 			false,
 			regularization,
@@ -199,7 +209,7 @@ extern "C" void gtsvmtrain_epsregression (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("MaxIter =%d Tolerance=%f Epsilon=%f \n", *pMaxIter, *pTolerance, *pEpsilon );
+	Rprintf("[e-SVR training] MaxIter=%d tolerance=%f epsilon=%f \n", *pMaxIter, *pTolerance, *pEpsilon );
 
 	// must be a multiple of 16
 	unsigned int const repetitions = 256;
@@ -226,15 +236,13 @@ extern "C" void gtsvmtrain_epsregression (
 		if(g_error && *pNoProgressIgnore && g_errorString == "An iteration made no progress" )
 		{
 			Rprintf("Warning: No convergent in the optimization process, ignore.\n");
-			strcpy( *pszError, "    ");
+			*pnError = 0;
 			g_error = false;
 			break;
 		}
 
 		if(g_error) break;
 	}
-
-	Rprintf("Iteration = %d \n", *npTotalIter );
 
 	_CHECK_EXCEPTIONS_
 
@@ -277,9 +285,7 @@ extern "C" void gtsvmtrain_epsregression (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("SV number = %d\n", *pSV );
-	Rprintf("rho = %f\n", *pRho );
-
+	Rprintf("[e-SVR training] Iteration=%d SV.number=%d rho=%f\n", *npTotalIter, *pSV, *pRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -316,6 +322,10 @@ extern "C" void gtsvmtrain_epsregression (
 				GTSVM_TYPE_DOUBLE,
 				(unsigned)*pXrow,
 				(unsigned)*pXcol,
+				(unsigned int)*pXInnerRow,
+				(unsigned int)*pXInnerCol,
+			    (unsigned int*)pXRowIndex,
+				(unsigned int*)pXColIndex,
 				columnMajor);
 		}
 
@@ -326,22 +336,24 @@ extern "C" void gtsvmtrain_epsregression (
 		_CHECK_EXCEPTIONS_
 	}
 
-	Rprintf("DONE!\n");
+	Rprintf("[e-SVR  training] DONE!\n");
 
 }
 
 extern "C" void gtsvmpredict_epsregression  (
 		  int    *pDecisionvalues,
 		  int    *pProbability,
+
 		  int    *pModelSparse,
 		  double *pModelX,
-		  int    *pModelRow,
-		  int 	 *pModelCol,
 		  int    *pModelVecOffset,
 		  int    *pModelVecIndex,
+		  int    *pModelRow,
+		  int 	 *pModelCol,
+	      int    *pModelRowIndex,
+	      int    *pModelColIndex,
 
 		  int    *pTotnSV,
-		  double *pModelY,
 		  double *pModelRho,
 		  double *pModelAlphas,
 
@@ -353,15 +365,19 @@ extern "C" void gtsvmpredict_epsregression  (
 
 		  int    *pSparseX,
 		  double *pX,
-		  int 	 *pXrow,
 		  int    *pXVecOffset,
 		  int    *pXVecIndex,
+		  int 	 *pXrow,
+		  int 	 *pXInnerRow,
+		  int 	 *pXInnerCol,
+		  int    *pXRowIndex,
+		  int    *pXColIndex,
 
 		  double *pRet,
 		  double *pDec,
 		  double *pProb,
 	      int    *pVerbose,
-		  char   **pszError)
+		  int    *pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -384,7 +400,10 @@ extern "C" void gtsvmpredict_epsregression  (
 		kernelParameter3 = 1;
 	}
 
-	Rprintf("Model Load (kernel_type=%d Model Sparse=%d[%d,%d])\n", *pKernelType, *pModelSparse, *pModelRow, *pModelCol );
+	*pnError = 0;
+
+	Rprintf("[e-SVR predict#] X=%d[%d,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+			*pSparseX, *pXrow, *pModelCol, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	_TRY_EXCEPTIONS_
 
@@ -402,7 +421,7 @@ extern "C" void gtsvmpredict_epsregression  (
 			(size_t*)pModelVecIndex,
 			(size_t*)pModelVecOffset,
 			GTSVM_TYPE_DOUBLE,
-			(void*)pLabelY.get(),
+			(void*)NULL,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pLinearTerm.get(),
 			GTSVM_TYPE_FLOAT,
@@ -423,12 +442,16 @@ extern "C" void gtsvmpredict_epsregression  (
 		psvm->InitializeDense(
 			(void*)pModelX,
 			GTSVM_TYPE_DOUBLE,
-			(void*)pLabelY.get(),
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			(unsigned int*)pModelRowIndex,
+			(unsigned int*)pModelColIndex,
+			(void*)NULL,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pLinearTerm.get(),
 			GTSVM_TYPE_FLOAT,
-			(unsigned int)*pModelRow,
-			(unsigned int)*pModelCol,
 			columnMajor,
 			false,
 			regularization,
@@ -445,7 +468,7 @@ extern "C" void gtsvmpredict_epsregression  (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("Set Model.\n");
+	Rprintf("[e-SVR predict#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -456,8 +479,6 @@ extern "C" void gtsvmpredict_epsregression  (
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
-
-	Rprintf("Predicting. (Sparse =%d[%d])\n", *pSparseX, *pXrow);
 
 	boost::shared_array< double > result( new double[ (*pXrow)] );
 
@@ -485,6 +506,10 @@ extern "C" void gtsvmpredict_epsregression  (
 			GTSVM_TYPE_DOUBLE,
 			(unsigned)*pXrow,
 			(unsigned)*pModelCol,
+			(unsigned int)*pXInnerRow,
+			(unsigned int)*pXInnerCol,
+		  	(unsigned int*)pXRowIndex,
+		  	(unsigned int*)pXColIndex,
 			columnMajor);
 	}
 
@@ -497,16 +522,22 @@ extern "C" void gtsvmpredict_epsregression  (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("DONE!(Score[%d,%d])\n", *pXrow, *pModelCol );
+	Rprintf("[e-SVR predict#] DONE!\n");
 }
 
-extern "C" void gtsvmtrain_classfication (double *pX,
-		   int    *pXrow,
-		   int 	  *pXcol,
-	       double *pY,
+extern "C" void gtsvmtrain_classfication (
+	       int    *pSparse,
+	       double *pX,
 	       int    *pVecOffset,// start from 0
 	       int 	  *pVecIndex, // start from 1
-	       int    *pSparse,
+		   int    *pXrow,
+		   int 	  *pXcol,
+	       int    *pXInnerRow,
+	       int    *pXInnerCol,
+	       int    *pXRowIndex,
+	       int    *pXColIndex,
+	       double *pY,
+
 	       int    *pKernelType,
 		   // the number of classes
 	       int    *pRclasses,
@@ -522,7 +553,11 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 	       int    *pFitted,
 	       int    *pBiased,
 	       int    *pMaxIter,
+	       int    *pNoProgressIgnore,
+
 			//output variables
+			//# total iteration
+	       int    *npTotal_iter,
 			//# the total number of classes
 	       int    *pClasses,
 			//# the total number of support vectors
@@ -535,14 +570,13 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 	       int    *pSVofclass,
 			//# dont know
 	       double *pRho,
-	       double * pPredict,
-			//# total iteration
-	       int    *npTotal_iter,
 			//# dont alpha value for each classes and support vector dim[nr, nclass-1]
 	       double *pTrainingAlphas,
-	       int    *pNoProgressIgnore,
+	       double * pPredict,
+	       double * pDecision,
+
 	       int    *pVerbose,
-	       char   **pszError)
+	       int    *pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -559,7 +593,7 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 	unsigned int nclasses = (unsigned int)(*pRclasses);
 	bool multiclass = (nclasses > 2 );
 
-	Rprintf("pKernel_type=%d nclasses=%d biased=%d sparse=%d[%d,%d] \n", *pKernelType, nclasses, *pBiased, *pSparse, *pXrow, *pXcol );
+	*pnError = 0;
 
 	// Only 1 class can not do classfication.
 	if( nclasses == 1 )
@@ -575,6 +609,9 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 		kernelParameter1 = 1;
 		kernelParameter3 = 1;
 	}
+
+	Rprintf("[C-SVC training] X=%d[%d,%d] nclasses=%d biased=%d kernel=%d degree=%f gamma=%f, c0=%f C=%f tolerance=%f\n",
+			*pSparse, *pXrow, *pXcol, nclasses, *pBiased, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization, *pTolerance );
 
 	_TRY_EXCEPTIONS_
 
@@ -612,12 +649,16 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 		psvm->InitializeDense(
 			(void*)pX,
 			GTSVM_TYPE_DOUBLE,
+			(unsigned int)*pXrow,
+			(unsigned int)*pXcol,
+			(unsigned int)*pXInnerRow,
+			(unsigned int)*pXInnerCol,
+		    (unsigned int*)pXRowIndex,
+			(unsigned int*)pXColIndex,
 			(void*)pY,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pLinearTerm.get(),
 			GTSVM_TYPE_FLOAT,
-			(unsigned int)*pXrow,
-			(unsigned int)*pXcol,
 			columnMajor,
 			multiclass,
 			regularization,
@@ -637,7 +678,7 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 	// for multiclass, m_classes = nclasses, but for binary classfication, m_classes is 1!!!
 	*pClasses = (multiclass) ? psvm->GetClasses() : psvm->GetClasses() + 1;
 
-	Rprintf("MaxIter =%d Tolerance=%f nClass =%d \n", *pMaxIter, *pTolerance, *pClasses );
+	Rprintf("[C-SVC training] MaxIter=%d tolerance=%f class=%d \n", *pMaxIter, *pTolerance, *pClasses );
 
 	// must be a multiple of 16
 	unsigned int const repetitions = 256;
@@ -664,7 +705,7 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 		if(g_error && *pNoProgressIgnore && g_errorString == "An iteration made no progress" )
 		{
 			Rprintf("Warning: No convergent in the optimization process, ignore.\n");
-			strcpy( *pszError, "    ");
+			*pnError = 0;
 			g_error = false;
 			break;
 		}
@@ -673,8 +714,6 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 	}
 
 	_CHECK_EXCEPTIONS_
-
-	Rprintf("Iteration = %d \n", *npTotal_iter );
 
 	//*** for binary classfication, only one Alpha value for each sample.
 	unsigned int nCol = psvm->GetClasses();
@@ -722,8 +761,7 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 
 	*pRho = -1.0 * psvm->GetBias();
 
-	Rprintf("SV number = %d\n", *pSV );
-	Rprintf("rho = %f\n", *pRho );
+	Rprintf("[C-SVC training] Iteration=%d SV.number=%d rho=%f\n", *npTotal_iter, *pSV, *pRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -784,6 +822,10 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 				GTSVM_TYPE_DOUBLE,
 				(unsigned)*pXrow,
 				(unsigned)*pXcol,
+				(unsigned int)*pXInnerRow,
+				(unsigned int)*pXInnerCol,
+			    (unsigned int*)pXRowIndex,
+				(unsigned int*)pXColIndex,
 				columnMajor);
 
 			if(!multiclass)
@@ -812,7 +854,7 @@ extern "C" void gtsvmtrain_classfication (double *pX,
 		_CHECK_EXCEPTIONS_
 	}
 
-	Rprintf("DONE!\n");
+	Rprintf("[C-SVC training] DONE!\n");
 
 }
 
@@ -821,14 +863,15 @@ extern "C" void gtsvmpredict_classfication  (
 		  int    *pProbability,
 		  int    *pModelSparse,
 		  double *pModelX,
-		  int    *pModelRow,
-		  int 	 *pModelCol,
 		  int    *pModelVecOffset,
 		  int    *pModelVecIndex,
+		  int    *pModelRow,
+		  int 	 *pModelCol,
+		  int    *pModelRowIndex,
+		  int 	 *pModelColIndex,
 
 		  int    *pNclasses,
 		  int    *pTotnSV,
-		  double *pModelY,
 		  double *pModelRho,
 		  double *pModelAlphas,
 
@@ -840,15 +883,19 @@ extern "C" void gtsvmpredict_classfication  (
 
 		  int    *pSparseX,
 		  double *pX,
-		  int 	 *pXrow,
 		  int    *pXVecOffset,
 		  int    *pXVecIndex,
+		  int 	 *pXrow,
+		  int    *pXInnerRow,
+		  int    *pXInnerCol,
+		  int    *pXRowIndex,
+		  int    *pXColIndex,
 
 		  double *pRet,
 		  double *pDec,
 		  double *pProb,
 	      int    *pVerbose,
-		  char   **pszError)
+		  int    *pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -875,12 +922,15 @@ extern "C" void gtsvmpredict_classfication  (
 		kernelParameter3 = 1;
 	}
 
-	Rprintf("Model Load (kernel_type=%d nclasses=%d Sparse=%d[%d,%d])\n", *pKernelType, nclasses, *pModelSparse, *pModelRow, *pModelCol );
+	*pnError = 0;
+
+	Rprintf("[C-SVC predict*] X=%d[%d,%d] nclasses=%d, kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+			*pSparseX, *pXrow, *pModelCol, nclasses, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	_TRY_EXCEPTIONS_
 
-	boost::shared_array< float > pLinearTerm( new float[ *pXrow ] );
-	std::fill( pLinearTerm.get(), pLinearTerm.get() + *pXrow, 1.0f );
+	boost::shared_array< float > pLinearTerm( new float[ *pModelRow ] );
+	std::fill( pLinearTerm.get(), pLinearTerm.get() + *pModelRow, 1.0f );
 
     if (*pModelSparse > 0)
 		psvm->InitializeSparse(
@@ -888,7 +938,7 @@ extern "C" void gtsvmpredict_classfication  (
 			(size_t*)pModelVecIndex,
 			(size_t*)pModelVecOffset,
 			GTSVM_TYPE_DOUBLE,
-			(void*)pModelY,
+			(void*)NULL,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pLinearTerm.get(),
 			GTSVM_TYPE_FLOAT,
@@ -909,12 +959,16 @@ extern "C" void gtsvmpredict_classfication  (
 		psvm->InitializeDense(
 			(void*)pModelX,
 			GTSVM_TYPE_DOUBLE,
-			(void*)pModelY,
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			(unsigned int*)pModelRowIndex,
+			(unsigned int*)pModelColIndex,
+			(void*)NULL,
 			GTSVM_TYPE_DOUBLE,
 			(void*)pLinearTerm.get(),
 			GTSVM_TYPE_FLOAT,
-			(unsigned int)*pModelRow,
-			(unsigned int)*pModelCol,
 			columnMajor,
 			multiclass,
 			regularization,
@@ -941,7 +995,7 @@ extern "C" void gtsvmpredict_classfication  (
 
 	unsigned int ncol = psvm->GetClasses();
 
-	Rprintf("Predicting. sparse= %d,  (Dec Matrix =[%d, %d])\n", *pSparseX, *pXrow, ncol);
+	Rprintf("[C-SVC predict*] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
 
 	boost::shared_array< double > result( new double[ (*pXrow) * ncol ] );
 
@@ -973,6 +1027,10 @@ extern "C" void gtsvmpredict_classfication  (
 			GTSVM_TYPE_DOUBLE,
 			(unsigned)*pXrow,
 			(unsigned)*pModelCol,
+			(unsigned int)*pXInnerRow,
+			(unsigned int)*pXInnerCol,
+		    (unsigned int*)pXRowIndex,
+			(unsigned int*)pXColIndex,
 			columnMajor);
 
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
@@ -1006,5 +1064,142 @@ extern "C" void gtsvmpredict_classfication  (
 		}
 	}
 
-	Rprintf("DONE!(Score[%d,%d])\n", *pXrow, ncol );
+	Rprintf("[C-SVC predict*] DONE!\n");
+}
+
+extern "C" SEXP set_big_matrix_byrows(SEXP mat, SEXP rows, SEXP value)
+{
+	SEXP dim = getAttrib( mat, R_DimSymbol );
+	int ncol = INTEGER(dim)[0];
+	int nrow = INTEGER(dim)[1];
+
+	//SEXP dim_value = getAttrib( value, R_DimSymbol );
+	//int ncol_value = INTEGER(dim_value)[0];
+	//int nrow_value = INTEGER(dim_value)[1];
+
+	int nlen = XLENGTH(rows);
+
+    double *pMat = REAL(mat);
+    double *pVal = REAL(value);
+    int *pRows = INTEGER(rows);
+
+    for(int r = 0; r < nlen; r++)
+    {
+		int idx_row = pRows[r];
+      	for(int c = 0; c < ncol; c++)
+		 	pMat[idx_row + c * nrow] = pVal[r + c * nrow];
+    }
+
+    return R_NilValue;
+}
+
+
+extern "C" void bigmatrix_set_bycols (
+		   double *pMat,
+		   int* pNRow,
+		   int* pNCol,
+		   int* pCols,
+		   int* pNLen,
+		   double *pValue)
+{
+	Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
+
+	int nrow = *pNRow;
+
+    for(int c = 0; c < *pNLen; c++)
+    {
+		int idx_col = pCols[c] - 1;
+      	for(int r = 0; r < nrow; r++)
+      	{
+		 	pMat[r + idx_col * nrow] = pValue[r + c * nrow];
+		}
+    }
+
+    return;
+}
+
+
+extern "C" void bigmatrix_set_byrows (
+		   double *pMat,
+		   int* pNRow,
+		   int* pNCol,
+		   int* pRows,
+		   int* pNLen,
+		   double *pValue)
+{
+	Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
+
+	int ncol = *pNCol;
+	int nrow = *pNRow;
+
+    for(int r = 0; r < *pNLen; r++)
+    {
+		int idx_row = pRows[r] - 1;
+		int address = 0;
+      	for(int c = 0; c < ncol; c++)
+      	{
+			address = c * nrow;
+		 	pMat[idx_row + address ] = pValue[ r + address];
+		}
+    }
+
+    return;
+}
+
+
+extern "C" void bigmatrix_exchange_rows (
+		   double *pMat,
+		   int* pNRow,
+		   int* pNCol,
+		   int* pNRows1,
+		   int* pNLen1,
+		   int* pNRows2,
+		   int* pNLen2 )
+{
+	int nrow = *pNRow;
+	int ncol = *pNCol;
+
+	for(int k=0; k<*pNLen1; k++)
+	{
+		int row1 = pNRows1[k] -1;
+		int row2 = pNRows2[k] -1;
+
+		for(int c = 0; c < ncol; c++)
+		{
+			int address = c * nrow;
+			double t = pMat[ row2 + address];
+			pMat[ row2 + address] = pMat[row1 + address];
+			pMat[ row1 + address] = t;
+		}
+	}
+    return;
+}
+
+
+
+extern "C" void bigmatrix_exchange_cols (
+		   double *pMat,
+		   int* pNRow,
+		   int* pNCol,
+		   int* pNCols1,
+		   int* pNLen1,
+		   int* pNCols2,
+		   int* pNLen2 )
+{
+	int nrow = *pNRow;
+	//int ncol = *pNCol;
+
+	for(int k=0; k<*pNLen1; k++)
+	{
+		int col1 = pNCols1[k] -1;
+		int col2 = pNCols2[k] -1;
+
+		for(int r = 0; r < nrow; r++)
+		{
+			double t = pMat[ r + col1 * nrow];
+			pMat[ r + col2 * nrow] = pMat[r + col1 * nrow];
+			pMat[ r + col1 * nrow] = t;
+		}
+	}
+    return;
 }
