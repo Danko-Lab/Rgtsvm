@@ -384,7 +384,7 @@ svm.default <- function (x,
         }
 	}
 	
-	ret$host <- try( system("hostname", intern=TRUE) );
+	ret$host <-  try(system("hostname", intern = TRUE),silent=T);
 	class (ret) <- "gtsvm"
 
     if (fitted) {
