@@ -1,6 +1,6 @@
 ## Rgtsvm package,  Zhong Wang<zw355@cornell.edu>
 ##
-## This script is a modification of the svm.R file
+## This script is a modification of the tune.R file
 ## from the e1071 package (version 1.6-6)
 ## https://cran.r-project.org/web/packages/e1071/index.html
 ##

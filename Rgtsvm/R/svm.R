@@ -214,6 +214,7 @@ svm.default <- function (x,
           probability = FALSE,
           no.change.x = TRUE,
           verbose     = FALSE,
+          class.weights= NULL,
           ...,
           subset,
           na.action = na.omit)
@@ -265,17 +266,24 @@ svm.default <- function (x,
     	stop("Rgtsvm only support C-classification and eps-regression!")
 	else
 		if(type.name == "eps-regression") type <- EPSILON_SVR;
-		
+
+    if (type != C_CLASSFICATION && length(class.weights) > 0) 
+    {
+        class.weights <- NULL
+        warning(sQuote("class.weights"), " are set to NULL for regression mode. For classification, use a _factor_ for ", sQuote("y"),", or specify the correct ", sQuote("type"), " argument.")
+    }
+
 	## kernel type 
     kernel <- pmatch(kernel, c("linear",
                                "polynomial",
                                "radial",
                                "sigmoid"), 99) - 1
-    if (kernel > 10) stop("wrong kernel specification!")
 
+    if (kernel > 10) stop("wrong kernel specification!")
     if (is.null(kernel)) stop("kernel argument must not be NULL!")
     if (is.null(sparse)) stop("sparse argument must not be NULL!")
-	
+
+
 	if( !sparse && as.character( class(x) )=="matrix" )
 	{
 		x.backup <- x;
@@ -297,7 +305,7 @@ svm.default <- function (x,
 			 coef0=coef0, cost=cost, tolerance=tolerance, epsilon=epsilon, 
 			 shrinking=shrinking, cross=cross, rough.cross=rough.cross, 
 			 sparse=sparse, probability=probability,
-			 biased = biased, fitted=fitted, nclass = var.info$nclass,
+			 biased = biased, fitted=fitted, nclass = var.info$nclass, class.weights= class.weights,
 			 verbose = verbose);
 
 	x <- var.info$x;
@@ -323,6 +331,7 @@ svm.default <- function (x,
                  degree    = degree,
                  gamma     = gamma,
                  coef0     = coef0,
+                 class.weights = class.weights,
 				 
 				 tolerance = tolerance,
                  epsilon   = epsilon,

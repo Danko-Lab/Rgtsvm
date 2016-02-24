@@ -11,13 +11,13 @@ trainAllStatus <- trainAllStatus[c(idx1, idx2)]
 data <- data.frame(Y=trainAllStatus, trainAll);
 
 ### Example 1
-gt.model1 <- svm( Y~., data=data, gamma=0.05, tolerance=0.01, type="C-classification", scale = FALSE, fitted=TRUE);
+gt.model1 <- svm( Y~., data=data, gamma=0.05, tolerance=0.01, type="C-classification",class.weights=c(0.5, 200), scale = FALSE, fitted=TRUE);
 
 gt.predict1 <- predict( gt.model1, trainAll, decision.values = TRUE );
 accuracy <- length(which(trainAllStatus==gt.predict1))/length(trainAllStatus);
 cat("accuracy=", accuracy, "\n");
 
-plot(gt.model2, data, formula = Y~.);
+plot(gt.model1, data, formula = Y~.);
 
 ### Example 2
 

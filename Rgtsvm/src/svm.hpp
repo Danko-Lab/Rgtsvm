@@ -82,6 +82,8 @@ struct SVM {
 		bool const columnMajor,
 		bool const multiclass,
 		float const regularization,
+		float const *regularizationWeights,
+		unsigned int classNumber,
 		GTSVM_Kernel const kernel,
 		float const kernelParameter1,
 		float const kernelParameter2,
@@ -108,6 +110,8 @@ struct SVM {
 		bool const columnMajor,
 		bool const multiclass,
 		float const regularization,
+		float const *regularizationWeights,
+		unsigned int classNumber,
 		GTSVM_Kernel const kernel,
 		float const kernelParameter1,
 		float const kernelParameter2,
@@ -215,6 +219,8 @@ struct SVM {
 
 	void Restart(
 		float const regularization,
+		float const *regularizationWeights,
+		unsigned const int classSize,
 		GTSVM_Kernel const kernel,
 		float const kernelParameter1,
 		float const kernelParameter2,
@@ -288,6 +294,7 @@ private:
 	boost::shared_array< float > m_trainingLterms;
 	boost::shared_array< float > m_trainingVectorNormsSquared;
 	boost::shared_array< float > m_trainingVectorKernelNormsSquared;
+	boost::shared_array< float > m_regularizationWithWeights;
 
 	float m_regularization;
 	GTSVM_Kernel m_kernel;
@@ -334,6 +341,8 @@ private:
 	float* m_deviceTrainingVectorsTranspose;
 	CUDA::SparseKernelClusterHeader* m_deviceClusterHeaders;
 	boost::uint32_t* m_deviceClusterSizeSums;
+
+	float* m_deviceRegularizationWithWeights;
 
 	size_t m_workSize;
 	void* m_deviceWork[ 4 ];

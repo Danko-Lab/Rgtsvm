@@ -722,7 +722,8 @@ SVM::SVM() :
 	m_deviceNonzeroIndices( NULL ),
 	m_deviceTrainingVectorsTranspose( NULL ),
 	m_deviceClusterHeaders( NULL ),
-	m_deviceClusterSizeSums( NULL )
+	m_deviceClusterSizeSums( NULL ),
+	m_deviceRegularizationWithWeights(NULL)
 {
 	for ( unsigned int ii = 0; ii < ARRAYLENGTH( m_deviceWork ); ++ii )
 		m_deviceWork[ ii ] = NULL;
@@ -777,6 +778,8 @@ void SVM::InitializeSparse(
 	bool const columnMajor,
 	bool const multiclass,
 	float const regularization,
+	float const *regularizationWeights,
+	unsigned int classNumber,
 	GTSVM_Kernel const kernel,
 	float const kernelParameter1,
 	float const kernelParameter2,
@@ -869,7 +872,7 @@ void SVM::InitializeSparse(
 
 		ClusterTrainingVectors( smallClusters, activeClusters );
 
-		Restart( regularization, kernel, kernelParameter1, kernelParameter2, kernelParameter3, biased );
+		Restart( regularization, regularizationWeights, classNumber, kernel, kernelParameter1, kernelParameter2, kernelParameter3, biased );
 	}
 	catch( ... ) {
 
@@ -895,6 +898,8 @@ void SVM::InitializeDense(
 	bool const columnMajor,
 	bool const multiclass,
 	float const regularization,
+	float const *regularizationWeights,
+	unsigned int classNumber,
 	GTSVM_Kernel const kernel,
 	float const kernelParameter1,
 	float const kernelParameter2,
@@ -989,7 +994,7 @@ void SVM::InitializeDense(
 
 		ClusterTrainingVectors( smallClusters, activeClusters );
 
-		Restart( regularization, kernel, kernelParameter1, kernelParameter2, kernelParameter3, biased );
+		Restart( regularization, regularizationWeights, classNumber, kernel, kernelParameter1, kernelParameter2, kernelParameter3, biased );
 	}
 	catch( ... ) {
 
@@ -1426,6 +1431,11 @@ void SVM::DeinitializeDevice() {
 			CUDA_VERIFY( "Failed to free cluster size sums on device", cudaFree( m_deviceClusterSizeSums ) );
 			m_deviceClusterSizeSums = NULL;
 		}
+		if ( m_deviceRegularizationWithWeights != NULL ) {
+
+			CUDA_VERIFY( "Failed to free m_deviceRegularizationWithWeightson device", cudaFree( m_deviceRegularizationWithWeights ) );
+			m_deviceRegularizationWithWeights = NULL;
+		}
 	}
 }
 
@@ -1797,7 +1807,7 @@ void SVM::Recalculate() {
 			m_logMaximumClusterSize,
 			m_clusters,
 			m_workSize,
-			m_regularization
+			m_deviceRegularizationWithWeights
 		);
 		CUDA_VERIFY(
 			"Failed to copy bias numerator from device",
@@ -1825,6 +1835,8 @@ void SVM::Recalculate() {
 
 void SVM::Restart(
 	float const regularization,
+	float const *regularizationWeights,
+	unsigned int classNumber,
 	GTSVM_Kernel const kernel,
 	float const kernelParameter1,
 	float const kernelParameter2,
@@ -1891,6 +1903,10 @@ void SVM::Restart(
 	}
 
 	m_regularization = regularization;
+	m_regularizationWithWeights = boost::shared_array< float >( new float[ classNumber+1 ] );
+	for(unsigned int ii=0; ii<classNumber+1; ii++)
+		m_regularizationWithWeights[ii] = regularizationWeights[ii]*regularization;
+
 	m_kernel = kernel;
 	m_kernelParameter1 = kernelParameter1;
 	m_kernelParameter2 = kernelParameter2;
@@ -2010,7 +2026,7 @@ std::pair< CUDA_FLOAT_DOUBLE, CUDA_FLOAT_DOUBLE > const SVM::Optimize( unsigned 
 			m_logMaximumClusterSize,
 			m_clusters,
 			m_workSize,
-			m_regularization
+			m_deviceRegularizationWithWeights
 		);
 
 		CUDA_VERIFY(
@@ -2065,7 +2081,7 @@ std::pair< CUDA_FLOAT_DOUBLE, CUDA_FLOAT_DOUBLE > const SVM::Optimize( unsigned 
 		m_clusters,
 		m_classes,
 		m_workSize,
-		m_regularization,
+		m_deviceRegularizationWithWeights,
 		m_bias
 	);
 	CUDA_VERIFY(
@@ -2497,6 +2513,24 @@ void SVM::InitializeDevice() {
 		throw std::runtime_error( "SVM has already been initialized" );
 	m_initializedDevice = true;
 
+	int nClassNumber = m_classes;
+	if(m_classes==1) nClassNumber =2;
+
+	CUDA_VERIFY(
+		"Failed to allocate space for RegularizationWithWeights on device",
+		cudaMalloc( reinterpret_cast< void** >( &m_deviceRegularizationWithWeights ), (nClassNumber+1) * sizeof( float ) )
+	);
+
+	CUDA_VERIFY(
+		"Failed to copy RegularizationWithWeights to device",
+		cudaMemcpy(
+			m_deviceRegularizationWithWeights,
+			m_regularizationWithWeights.get(),
+			(nClassNumber + 1) * sizeof( float ),
+			cudaMemcpyHostToDevice
+		)
+	);
+
 	CUDA_VERIFY(
 		"Failed to allocate space for batch vectors on host",
 		cudaMallocHost( &m_batchVectorsTranspose, ( m_columns << 4 ) * sizeof( float ) )
@@ -2895,6 +2929,7 @@ void SVM::InitializeDevice() {
 			)
 		);
 
+
 		CUDA_VERIFY( "Failed to free cluster headers on host", cudaFreeHost( clusterHeaders ) );
 		CUDA_VERIFY( "Failed to free cluster size sums on host", cudaFreeHost( clusterSizeSums ) );
 		CUDA_VERIFY( "Failed to free nonzero indices on host", cudaFreeHost( nonzeroIndices ) );
@@ -2976,7 +3011,7 @@ bool const SVM::IterateUnbiasedBinary() {
 		m_workSize,
 		16,
 		m_foundSize,
-		m_regularization
+		m_deviceRegularizationWithWeights
 	);
 	std::copy( m_foundValues, m_foundValues + 16, m_foundIndices );
 
@@ -3109,6 +3144,7 @@ bool const SVM::IterateUnbiasedBinary() {
 				unsigned int const batchIndex = m_batchIndices[ jj ];
 				unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 				float const sign = ( ( m_trainingLabels[ unclusteredIndex ] > 0 ) ? 1.0f : -1.0f );
+				int const label = m_trainingLabels[ unclusteredIndex ];
 				//double const gradient = 1 - sign * m_batchResponses[ jj ];
 
 				float const lterm = m_trainingLterms[ unclusteredIndex ];
@@ -3117,8 +3153,8 @@ bool const SVM::IterateUnbiasedBinary() {
 				double const scale = m_batchSubmatrix[ ( jj << 4 ) + jj ];
 
 				double newAlpha = m_batchAlphas[ jj ] + gradient / scale;
-				if ( newAlpha > m_regularization )
-					newAlpha = m_regularization;
+				if ( newAlpha > m_regularizationWithWeights[label+1] )
+					newAlpha = m_regularizationWithWeights[label+1];
 				else if ( newAlpha < 0 )
 					newAlpha = 0;
 
@@ -3231,7 +3267,7 @@ bool const SVM::IterateBiasedBinary() {
 		m_workSize,
 		16,
 		m_foundSize,
-		m_regularization
+		m_deviceRegularizationWithWeights
 	);
 	std::copy( m_foundValues, m_foundValues + 16, m_foundIndices );
 
@@ -3248,7 +3284,7 @@ bool const SVM::IterateBiasedBinary() {
 		m_workSize,
 		16,
 		m_foundSize,
-		m_regularization
+		m_deviceRegularizationWithWeights
 	);
 	std::copy( m_foundValues, m_foundValues + 16, m_foundIndices + 16 );
 
@@ -3399,13 +3435,14 @@ bool const SVM::IterateBiasedBinary() {
 				unsigned int const batchIndex = m_batchIndices[ jj ];
 				unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 				float const sign = ( ( m_trainingLabels[ unclusteredIndex ] > 0 ) ? 1.0f : -1.0f );
+				int const label = m_trainingLabels[ unclusteredIndex ] ;
 				//double const gradient = 1 - sign * m_batchResponses[ jj ];
 
 				float const lterm = m_trainingLterms[ unclusteredIndex ];
 				double const gradient = lterm - sign * m_batchResponses[ jj ];
 
 				float score = std::abs( gradient );
-				if ( ( gradient > 0 ) && ( ! ( m_batchAlphas[ jj ] < m_regularization ) ) )
+				if ( ( gradient > 0 ) && ( ! ( m_batchAlphas[ jj ] < m_regularizationWithWeights[label+1] ) ) )
 					score = -score;
 				else if ( ( gradient < 0 ) && ( ! ( m_batchAlphas[ jj ] > 0 ) ) )
 					score = -score;
@@ -3420,6 +3457,7 @@ bool const SVM::IterateBiasedBinary() {
 		unsigned int const batchIndex1 = m_batchIndices[ bestIndex1 ];
 		unsigned int const unclusteredIndex1 = m_clusterIndices[ batchIndex1 >> m_logMaximumClusterSize ][ batchIndex1 & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 		float const sign1 = ( ( m_trainingLabels[ unclusteredIndex1 ] > 0 ) ? 1.0f : -1.0f );
+		int   const label1 = round(sign1);
 		float const lterm1 = m_trainingLterms[ unclusteredIndex1 ];
 
 		double alpha1 = std::numeric_limits< double >::quiet_NaN();
@@ -3434,7 +3472,7 @@ bool const SVM::IterateBiasedBinary() {
 					unsigned int const batchIndex = m_batchIndices[ jj ];
 					unsigned int const unclusteredIndex = m_clusterIndices[ batchIndex >> m_logMaximumClusterSize ][ batchIndex & ( ( 1u << m_logMaximumClusterSize ) - 1 ) ];
 					float const sign = ( ( m_trainingLabels[ unclusteredIndex ] > 0 ) ? 1.0f : -1.0f );
-
+					int   const label = round(sign);
 					float const lterm = m_trainingLterms[ unclusteredIndex ];
 
 					double const k11 = m_batchSubmatrix[ ( bestIndex1 << 4 ) + bestIndex1 ];
@@ -3448,28 +3486,28 @@ bool const SVM::IterateBiasedBinary() {
 					double newAlpha1 = m_batchAlphas[ bestIndex1 ] + delta * sign1;
 					if ( newAlpha1 < 0 )
 						newAlpha1 = 0;
-					else if ( newAlpha1 > m_regularization )
-						newAlpha1 = m_regularization;
+					else if ( newAlpha1 > m_regularizationWithWeights[label1+1] )
+						newAlpha1 = m_regularizationWithWeights[label1+1];
 					double const positiveDelta = ( newAlpha1 - m_batchAlphas[ bestIndex1 ] ) * sign1;
 
 					double newAlpha2 = m_batchAlphas[ jj ] - delta * sign;
 					if ( newAlpha2 < 0 )
 						newAlpha2 = 0;
-					else if ( newAlpha2 > m_regularization )
-						newAlpha2 = m_regularization;
+					else if ( newAlpha2 > m_regularizationWithWeights[label+1] )
+						newAlpha2 = m_regularizationWithWeights[label+1];
 					double const negativeDelta = ( m_batchAlphas[ jj ] - newAlpha2 ) * sign;
 
 					if ( std::abs( positiveDelta ) < std::abs( negativeDelta ) ) {
 
 						delta = positiveDelta;
 						newAlpha2 = m_batchAlphas[ jj ] - delta * sign;
-						BOOST_ASSERT( ( newAlpha2 >= 0 ) && ( newAlpha2 <= m_regularization ) );
+						BOOST_ASSERT( ( newAlpha2 >= 0 ) && ( newAlpha2 <= m_regularizationWithWeights[label+1] ) );
 					}
 					else if ( std::abs( negativeDelta ) < std::abs( positiveDelta ) ) {
 
 						delta = negativeDelta;
 						newAlpha1 = m_batchAlphas[ bestIndex1 ] + delta * sign1;
-						BOOST_ASSERT( ( newAlpha2 >= 0 ) && ( newAlpha2 <= m_regularization ) );
+						BOOST_ASSERT( ( newAlpha1 >= 0 ) && ( newAlpha1 <= m_regularizationWithWeights[label1+1] ) );
 					}
 					else {
 
@@ -3598,7 +3636,7 @@ bool const SVM::IterateUnbiasedMulticlass() {
 		m_workSize,
 		16,
 		m_foundSize,
-		m_regularization
+		m_deviceRegularizationWithWeights
 	);
 	std::copy( m_foundValues, m_foundValues + 16, m_foundIndices );
 
@@ -3782,7 +3820,7 @@ bool const SVM::IterateUnbiasedMulticlass() {
 				if ( kk == label ) {
 
 					gradient += 1;
-					bound = m_regularization;
+					bound = m_regularizationWithWeights[label+1];
 				}
 
 				if ( m_batchAlphas[ kk * 16 + jj ] < bound ) {

@@ -142,6 +142,10 @@ extern "C" void gtsvmtrain_epsregression (
 	boost::shared_array< float > pLinearTerm( new float[ *pXrow ] );
 	boost::shared_array< double > pLabelY( new double[ *pXrow ] );
 
+	// c(-1,0,1) + 1 ==> c(0, 1,2)
+	boost::shared_array< float > regularizationWeights( new float[ 3 ] );
+	std::fill( regularizationWeights.get(), regularizationWeights.get() + 3, 1.0f );
+
 	_TRY_EXCEPTIONS_
 
 	for(unsigned int ii=0; ii<nSample; ii++)
@@ -169,6 +173,8 @@ extern "C" void gtsvmtrain_epsregression (
 			false,
 			false,
 			regularization,
+			regularizationWeights.get(),
+			2,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			kernelParameter1,
 			kernelParameter2,
@@ -196,6 +202,8 @@ extern "C" void gtsvmtrain_epsregression (
 			columnMajor,
 			false,
 			regularization,
+			regularizationWeights.get(),
+			2,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			(float)kernelParameter1,
 			(float)kernelParameter2,
@@ -407,6 +415,10 @@ extern "C" void gtsvmpredict_epsregression  (
 
 	_TRY_EXCEPTIONS_
 
+	// c(-1,0,1) + 1 ==> c(0, 1,2)
+	boost::shared_array< float > regularizationWeights( new float[ 3 ] );
+	std::fill( regularizationWeights.get(), regularizationWeights.get() + 3, 1.0f );
+
 	boost::shared_array< double > pLabelY( new double[ *pModelRow ] );
 	boost::shared_array< float > pLinearTerm( new float[ *pModelRow ] );
 	for(int i=0;i<(*pModelRow); i++)
@@ -430,6 +442,8 @@ extern "C" void gtsvmpredict_epsregression  (
 			false,
 			false,
 			regularization,
+			regularizationWeights.get(),
+			2,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			kernelParameter1,
 			kernelParameter2,
@@ -455,6 +469,8 @@ extern "C" void gtsvmpredict_epsregression  (
 			columnMajor,
 			false,
 			regularization,
+			regularizationWeights.get(),
+			2,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			(float)kernelParameter1,
 			(float)kernelParameter2,
@@ -549,6 +565,7 @@ extern "C" void gtsvmtrain_classfication (
 	       double *pCoef0,
 	       // pRegularization <==> cost in libsvm
 	       double *pCost,
+	       double *pClassWeight,
 		   double *pTolerance,
 	       int    *pFitted,
 	       int    *pBiased,
@@ -618,6 +635,23 @@ extern "C" void gtsvmtrain_classfication (
 	boost::shared_array< float > pLinearTerm( new float[ *pXrow ] );
 	std::fill( pLinearTerm.get(), pLinearTerm.get() + (*pXrow), 1.0f );
 
+	// c(-1,0,1) + 1 ==> c(0, 1,2)
+	boost::shared_array< float > regularizationWeights( new float[ nclasses + 1 ] );
+	std::fill( regularizationWeights.get(), regularizationWeights.get() + nclasses + 1, 1.0f );
+	if( pClassWeight != NULL )
+	{
+		if( nclasses==2 )
+		{
+			regularizationWeights[0] = pClassWeight[0];
+			regularizationWeights[2] = pClassWeight[1];
+		}
+		else
+		{
+			for(unsigned int ii=0; ii<nclasses; ii++)
+				regularizationWeights[ii] = pClassWeight[ii];
+		}
+	}
+
     if (*pSparse > 0)
 	{
 		psvm->InitializeSparse(
@@ -635,6 +669,8 @@ extern "C" void gtsvmtrain_classfication (
 			false,
 			multiclass,
 			regularization,
+			regularizationWeights.get(),
+			nclasses,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			kernelParameter1,
 			kernelParameter2,
@@ -662,6 +698,8 @@ extern "C" void gtsvmtrain_classfication (
 			columnMajor,
 			multiclass,
 			regularization,
+			regularizationWeights.get(),
+			nclasses,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			(float)kernelParameter1,
 			(float)kernelParameter2,
@@ -932,6 +970,9 @@ extern "C" void gtsvmpredict_classfication  (
 	boost::shared_array< float > pLinearTerm( new float[ *pModelRow ] );
 	std::fill( pLinearTerm.get(), pLinearTerm.get() + *pModelRow, 1.0f );
 
+	boost::shared_array< float > regularizationWeights( new float[ *pNclasses + 1 ] );
+	std::fill( regularizationWeights.get(), regularizationWeights.get() + *pNclasses + 1, 1.0f );
+
     if (*pModelSparse > 0)
 		psvm->InitializeSparse(
 			(void*)pModelX,
@@ -947,6 +988,8 @@ extern "C" void gtsvmpredict_classfication  (
 			false,
 			multiclass,
 			regularization,
+			regularizationWeights.get(),
+			*pNclasses,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			kernelParameter1,
 			kernelParameter2,
@@ -972,6 +1015,8 @@ extern "C" void gtsvmpredict_classfication  (
 			columnMajor,
 			multiclass,
 			regularization,
+			regularizationWeights.get(),
+			*pNclasses,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			(float)kernelParameter1,
 			(float)kernelParameter2,

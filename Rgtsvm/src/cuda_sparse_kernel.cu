@@ -736,7 +736,7 @@ __global__ void SparseCalculateBiasKernel(
 	CUDA::SparseKernelClusterHeader const* const clusterHeaders,
 	unsigned int const logMaximumClusterSize,
 	unsigned int const clusters,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	__shared__ CUDA_FLOAT_DOUBLE numeratorSums[ 256 ];
@@ -758,8 +758,8 @@ __global__ void SparseCalculateBiasKernel(
 				boost::int32_t const label = clusterHeaders[ cluster ].labels[ index ];
 				float const lterm = clusterHeaders[ cluster ].lterms[ index ];
 				float const alpha = fabs( clusterHeaders[ cluster ].alphas[ index ] );
-
-				if ( ( alpha > 0 ) && ( alpha < regularization ) ) {
+				
+				if ( ( alpha > 0 ) && ( alpha < regularizationWithWeights[ label + 1 ] ) ) {
 
 					numerator += ( ( label > 0 ) ? 1 : -1 )*lterm - response;
 					++denominator;
@@ -838,7 +838,7 @@ __global__ void SparseCalculateObjectivesKernel(
 	unsigned int const logMaximumClusterSize,
 	unsigned int const clusters,
 	unsigned int const classes,
-	float const regularization,
+	float const *regularizationWithWeights,
 	float const bias
 )
 {
@@ -877,7 +877,7 @@ __global__ void SparseCalculateObjectivesKernel(
 
 					CUDA_FLOAT_DOUBLE const weight = 0.5 * alpha * response;
 
-					primalSum += weight + regularization * hinge;
+					primalSum += weight + regularizationWithWeights[label+1] * hinge;
 					//dualSum += std::fabs( alpha ) - weight;
 					dualSum += std::fabs( alpha ) * lterm - weight;
 				}
@@ -912,7 +912,7 @@ __global__ void SparseCalculateObjectivesKernel(
 					hinge += hingeShift;
 					weight *= 0.5;
 
-					primalSum += weight + regularization * hinge;
+					primalSum += weight + regularizationWithWeights[label+1] * hinge;
 					dualSum += trueAlpha - weight;
 				}
 			}
@@ -991,7 +991,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 	unsigned int const classes,
 	unsigned int const destinationSize,
 	unsigned int const logSortSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	__shared__ float    keysCache[   512 ];
@@ -1031,7 +1031,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 
 						score = fabs( gradient );
 						if (
-							( ( gradient > 0 ) && ( ! ( alpha < regularization ) ) ) ||
+							( ( gradient > 0 ) && ( ! ( alpha < regularizationWithWeights[label+1] ) ) ) ||
 							( ( gradient < 0 ) && ( ! ( alpha >              0 ) ) )
 						)
 						{
@@ -1059,7 +1059,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 
 								//gradient += 1;
 								gradient += lterm;
-								bound = regularization;
+								bound = regularizationWithWeights[label+1];
 							}
 
 							if ( ( alpha < bound ) && ( gradient > maximumGradient ) )
@@ -1086,8 +1086,8 @@ __global__ void SparseKernelFindLargestScoreKernel(
 							gradient = lterm + response;
 
 						float newAlpha = alpha + gradient / scale;
-						if ( newAlpha > regularization )
-							newAlpha = regularization;
+						if ( newAlpha > regularizationWithWeights[label+1] )
+							newAlpha = regularizationWithWeights[label+1];
 						else if ( newAlpha < 0 )
 							newAlpha = 0;
 
@@ -1127,7 +1127,7 @@ __global__ void SparseKernelFindLargestScoreKernel(
 							if ( kk == label ) {
 
 								gradient += lterm;
-								bound = regularization;
+								bound = regularizationWithWeights[label+1];
 							}
 
 							float delta = 0.5 * ( gradient - minimumGradient ) / scale;
@@ -1225,7 +1225,7 @@ __global__ void SparseKernelFindLargestPositiveGradientKernel(
 	unsigned int const clusters,
 	unsigned int const destinationSize,
 	unsigned int const logSortSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	__shared__ float    keysCache[   512 ];
@@ -1255,7 +1255,7 @@ __global__ void SparseKernelFindLargestPositiveGradientKernel(
 					if ( label > 0 ) {
 
 						float const gradient = lterm - response;
-						if ( alpha < regularization )
+						if ( alpha < regularizationWithWeights[label+1] )
 							score = gradient;
 					}
 					else {
@@ -1348,7 +1348,7 @@ __global__ void SparseKernelFindLargestNegativeGradientKernel(
 	unsigned int const clusters,
 	unsigned int const destinationSize,
 	unsigned int const logSortSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	__shared__ float    keysCache[   512 ];
@@ -1384,7 +1384,7 @@ __global__ void SparseKernelFindLargestNegativeGradientKernel(
 					else {
 
 						float const gradient = -1*lterm - response;
-						if ( alpha > -regularization )
+						if ( alpha > - regularizationWithWeights[label+1] )
 							score = -gradient;
 					}
 
@@ -1834,7 +1834,7 @@ std::pair< CUDA_FLOAT_DOUBLE const*, boost::uint32_t const* > SparseCalculateBia
 	unsigned int const logMaximumClusterSize,
 	unsigned int const clusters,
 	unsigned int const workSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	unsigned int const size = ( ( ( clusters << logMaximumClusterSize ) + 255 ) >> 8 );
@@ -1859,7 +1859,7 @@ std::pair< CUDA_FLOAT_DOUBLE const*, boost::uint32_t const* > SparseCalculateBia
 		deviceClusterHeaders,
 		logMaximumClusterSize,
 		clusters,
-		regularization
+		regularizationWithWeights
 	);
 
 #ifdef CUDA_USE_DOUBLE
@@ -1912,7 +1912,7 @@ std::pair< CUDA_FLOAT_DOUBLE const*, CUDA_FLOAT_DOUBLE const* > SparseCalculateO
 	unsigned int const clusters,
 	unsigned int const classes,
 	unsigned int const workSize,
-	float const regularization,
+	float const *regularizationWithWeights,
 	float const bias
 )
 {
@@ -1939,7 +1939,7 @@ std::pair< CUDA_FLOAT_DOUBLE const*, CUDA_FLOAT_DOUBLE const* > SparseCalculateO
 		logMaximumClusterSize,
 		clusters,
 		classes,
-		regularization,
+		regularizationWithWeights,
 		bias
 	);
 
@@ -2008,7 +2008,7 @@ void SparseKernelFindLargestScore(
 	unsigned int const workSize,
 	unsigned int const resultSize,
 	unsigned int const destinationSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	if ( ( resultSize < 1 ) || ( resultSize > 256 ) )
@@ -2085,7 +2085,7 @@ void SparseKernelFindLargestScore(
 			classes,
 			resultSize,
 			logSortSize,
-			regularization
+			regularizationWithWeights
 		);
 
 		std::pair< std::pair< float const*, boost::uint32_t const* >, unsigned int > deviceResult = FUFindLargest(
@@ -2154,7 +2154,7 @@ void SparseKernelFindLargestPositiveGradient(
 	unsigned int const workSize,
 	unsigned int const resultSize,
 	unsigned int const destinationSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	if ( ( resultSize < 1 ) || ( resultSize > 256 ) )
@@ -2230,7 +2230,7 @@ void SparseKernelFindLargestPositiveGradient(
 			clusters,
 			resultSize,
 			logSortSize,
-			regularization
+			regularizationWithWeights
 		);
 
 		std::pair< std::pair< float const*, boost::uint32_t const* >, unsigned int > deviceResult = FUFindLargest(
@@ -2299,7 +2299,7 @@ void SparseKernelFindLargestNegativeGradient(
 	unsigned int const workSize,
 	unsigned int const resultSize,
 	unsigned int const destinationSize,
-	float const regularization
+	float const *regularizationWithWeights
 )
 {
 	if ( ( resultSize < 1 ) || ( resultSize > 256 ) )
@@ -2375,7 +2375,7 @@ void SparseKernelFindLargestNegativeGradient(
 			clusters,
 			resultSize,
 			logSortSize,
-			regularization
+			regularizationWithWeights
 		);
 
 		std::pair< std::pair< float const*, boost::uint32_t const* >, unsigned int > deviceResult = FUFindLargest(

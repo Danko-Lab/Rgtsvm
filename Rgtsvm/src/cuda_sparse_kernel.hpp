@@ -137,7 +137,7 @@ std::pair< CUDA_FLOAT_DOUBLE const*, boost::uint32_t const* > SparseCalculateBia
 	unsigned int const logMaximumClusterSize,
 	unsigned int const clusters,
 	unsigned int const workSize,
-	float const regularization
+	float const *regularizationWithWeights
 );
 
 
@@ -158,7 +158,7 @@ std::pair< CUDA_FLOAT_DOUBLE const*, CUDA_FLOAT_DOUBLE const* > SparseCalculateO
 	unsigned int const clusters,
 	unsigned int const classes,
 	unsigned int const workSize,
-	float const regularization,
+	float const *regularizationWithWeights,
 	float const bias
 );
 
@@ -184,7 +184,7 @@ void SparseKernelFindLargestScore(
 	unsigned int const workSize,
 	unsigned int const resultSize,
 	unsigned int const destinationSize,
-	float const regularization
+	float const *regularizationWithWeights
 );
 
 
@@ -208,7 +208,7 @@ void SparseKernelFindLargestPositiveGradient(
 	unsigned int const workSize,
 	unsigned int const resultSize,
 	unsigned int const destinationSize,
-	float const regularization
+	float const *regularizationWithWeights
 );
 
 
@@ -232,7 +232,7 @@ void SparseKernelFindLargestNegativeGradient(
 	unsigned int const workSize,
 	unsigned int const resultSize,
 	unsigned int const destinationSize,
-	float const regularization
+	float const *regularizationWithWeights
 );
 
 

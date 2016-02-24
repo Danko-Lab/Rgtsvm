@@ -32,6 +32,9 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 
  	ptm <- proc.time();
 	nr  <- NROW(x);
+	
+	if(is.null(param$class.weights))
+		param$class.weights <- rep(1, param$nclass);
 
     cret <- .C ("gtsvmtrain_classfication",
                 ## data
@@ -62,6 +65,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 				as.double  (param$coef0),
                 ## regularization
 				as.double  (param$cost),
+                as.double  (param$class.weights),
                 as.double  (param$tolerance),
                 as.integer (param$fitted),
                 as.integer (param$biased),
