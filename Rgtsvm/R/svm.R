@@ -284,8 +284,10 @@ svm.default <- function (x,
     if (is.null(sparse)) stop("sparse argument must not be NULL!")
 
 
-	if( !sparse && as.character( class(x) )=="matrix" )
+	if( !sparse && ( class(x) %in% c("matrix", "data.frame") ) )
 	{
+		if( class(x) == "data.frame" ) x <- as.matrix(x);
+
 		x.backup <- x;
 		x <- attach.bigmatrix(x.backup);
 	}

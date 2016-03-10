@@ -66,7 +66,7 @@ setGeneric("bigm.internal.nrow",
 	});
 
 setMethod("bigm.internal.nrow", "BigMatrix.refer", function(x){
-	return(NROW(x$row.index));	
+	return(NROW(x$data));	
 	});
 
 setGeneric("bigm.internal.ncol",
@@ -76,7 +76,7 @@ setGeneric("bigm.internal.ncol",
 	});
 
 setMethod("bigm.internal.ncol", "BigMatrix.refer", function(x){
-	return(NROW(x$col.index));	
+	return(NCOL(x$data));	
 	});
 
 setMethod("as.double", "BigMatrix.refer", function(x){ as.double(x$data); } )

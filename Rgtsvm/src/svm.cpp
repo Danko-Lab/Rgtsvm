@@ -811,7 +811,7 @@ void SVM::InitializeSparse(
 		if (trainingLabels!=NULL)
 			SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
 		else
-			std::fill( m_trainingLabels.get(), m_trainingLabels.get() + m_rows, 1.0f );
+			std::fill( m_trainingLabels.get(), m_trainingLabels.get() + m_rows, 1 );
 
 		m_trainingLterms = boost::shared_array< float >( new float[ m_rows ] );
 		SVM_Memcpy( m_trainingLterms.get(), trainingLterms, 0, trainingLinearTermType, m_rows );
@@ -933,7 +933,7 @@ void SVM::InitializeDense(
 		if( trainingLabels != NULL)
 			SVM_Memcpy( m_trainingLabels.get(), trainingLabels, 0, trainingLabelsType, m_rows );
 		else
-			std::fill( m_trainingLabels.get(), m_trainingLabels.get() + m_rows, 1.0f );
+			std::fill( m_trainingLabels.get(), m_trainingLabels.get() + m_rows, 1 );
 
 		m_trainingLterms = boost::shared_array< float >( new float[ m_rows ] );
 		SVM_Memcpy( m_trainingLterms.get(), trainingLterms, 0, trainingLinearTermType, m_rows );
@@ -1905,7 +1905,10 @@ void SVM::Restart(
 	m_regularization = regularization;
 	m_regularizationWithWeights = boost::shared_array< float >( new float[ classNumber+1 ] );
 	for(unsigned int ii=0; ii<classNumber+1; ii++)
+	{
 		m_regularizationWithWeights[ii] = regularizationWeights[ii]*regularization;
+		// Rprintf("ii=%d, cost_weight=%f\n", 	ii, m_regularizationWithWeights[ii]);
+	}
 
 	m_kernel = kernel;
 	m_kernelParameter1 = kernelParameter1;
@@ -3795,6 +3798,7 @@ bool const SVM::IterateUnbiasedMulticlass() {
 			unsigned int const unclusteredIndex = m_clusterIndices[ cluster ][ index ];
 			BOOST_ASSERT( unclusteredIndex < m_rows );
 
+			//For multi-class, it is reasonable to do coercion conversion.
 			unsigned int const label = m_trainingLabels[ unclusteredIndex ];
 
 			double minimumGradient =  std::numeric_limits< double >::infinity();

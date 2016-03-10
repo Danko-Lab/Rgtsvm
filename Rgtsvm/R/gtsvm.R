@@ -9,7 +9,11 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 	y.org <- y;
 	y.idx <- c();
 	for( y0 in sort(unique(y) ) )
+	{
+		cat("* Lable=", y0, length(which( y == y0 ) ), "\n");
 		y.idx <- c( y.idx, which( y == y0 ) );
+	}
+	
 	y <- y[y.idx];
 	
 	if ( inherits(x, "BigMatrix.refer") )
@@ -223,7 +227,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
 	}	
 	else
 		x <- rbind(x, x);
-		
+
 	y <- c(y1, y1);
 	
 	nr <- nrow(x);
