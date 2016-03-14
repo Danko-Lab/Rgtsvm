@@ -135,10 +135,10 @@ extern "C" void gtsvmtrain_epsregression (
 	char szSparse=' ';
 	if(*pSparse) szSparse='S';
 
-	Rprintf("[e-SVR training] X = [%d,%d%c] kernel = %d degree = %f gamma = %f, c0 = %f C = %f\n",
-			*pXrow, *pXcol, szSparse, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
-
 	unsigned int nSample = (*pXrow)/2;
+	Rprintf("[e-SVR training] X = [%d,%d%c] kernel = %d degree = %f gamma = %f, c0 = %f C = %f\n",
+			nSample, *pXcol, szSparse, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
+
 	boost::shared_array< float > pLinearTerm( new float[ *pXrow ] );
 	boost::shared_array< double > pLabelY( new double[ *pXrow ] );
 
@@ -344,7 +344,7 @@ extern "C" void gtsvmtrain_epsregression (
 		_CHECK_EXCEPTIONS_
 	}
 
-	Rprintf("[e-SVR  training] DONE!\n");
+	Rprintf("[e-SVR training] DONE!\n");
 
 }
 

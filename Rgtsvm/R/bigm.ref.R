@@ -205,22 +205,14 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 		}
 		else
 		{
-			scale.cursor <- 0;
 			for(i in 1:length(scaled.cols))
 			{
-	         	newdata[,object$scaled] <-
-	         	   scale( newdata[, object$scaled, drop = FALSE], center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale")
-
 				if (scaled.cols[i])
-				{
-					scale.cursor <- scale.cursor + 1;
 					col.pool <- c(col.pool, i);
-					scale.pool <- c(scale.pool, scale.cursor);
-				}	
 					
 				if( length(col.pool) >= col.n || i==length(scaled.cols))
 				{
-					xtmp <- scale( x$data[, x$col.index[col.pool], drop=F], center = center[scale.pool], scale  = scale[scale.pool] );
+					xtmp <- scale( x$data[, x$col.index[col.pool], drop=F], center = center[col.pool], scale  = scale[col.pool] );
 
 					## NOTICE:
 					## 
@@ -236,10 +228,9 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 
 					#### x$data[,x$col.index[col.pool]] <- xtmp
 					vec.cols <- x$col.index[col.pool];
-					r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
 
+					r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
 					col.pool <- c();
-					scale.pool <- c();
 				}
 	        } 
 	        
