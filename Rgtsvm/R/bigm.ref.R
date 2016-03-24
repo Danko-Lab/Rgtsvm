@@ -156,9 +156,7 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 
 		col.n <- round( CACHE_SIZE / nrow(x$data) );
 		col.pool <- c();
-		scale.pool <- c();
-		scale.cursor <- 0;
-		
+
 		if(is.null(center) && is.null(scale) )
 		{
 			center <-c();
@@ -205,14 +203,24 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 		}
 		else
 		{
+			if( length( which(scaled.cols)) != length(center) || length(scale) != length(center) )
+				stop("scale columns dont have same length center and scale values.");
+			
+			scale.pool <- c();
+			scale.cursor <- 1;
+		
 			for(i in 1:length(scaled.cols))
 			{
 				if (scaled.cols[i])
+				{
 					col.pool <- c(col.pool, i);
-					
+					scale.pool <- c(scale.pool, scale.cursor );
+					scale.cursor <- scale.cursor + 1;
+				}
+				
 				if( length(col.pool) >= col.n || i==length(scaled.cols))
 				{
-					xtmp <- scale( x$data[, x$col.index[col.pool], drop=F], center = center[col.pool], scale  = scale[col.pool] );
+					xtmp <- scale( x$data[, x$col.index[col.pool], drop=F], center = center[scale.pool], scale  = scale[scale.pool] );
 
 					## NOTICE:
 					## 
@@ -231,9 +239,11 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 
 					r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
 					col.pool <- c();
+					scale.pool <- c();
 				}
+
 	        } 
-	        
+
 	        invisible(return(x));
 		}
 	});

@@ -335,7 +335,8 @@ svm.default <- function (x,
                  coef0     = coef0,
                  class.weights = class.weights,
 				 
-				 tolerance = tolerance,
+                 compprob  = FALSE,
+                 tolerance = tolerance,
                  epsilon   = epsilon,
                  sparse    = sparse,
                  scaled    = var.info$scale,
@@ -344,7 +345,7 @@ svm.default <- function (x,
                  biased    = biased,
                  subset    = subset, 
 
-				 #number of classes
+                 #number of classes
                  nclasses  = cret$nclasses,  
                  levels    = var.info$lev,
                  # total number of sv
@@ -368,18 +369,18 @@ svm.default <- function (x,
                  ## coefficiants of sv
                  coefs    = cret$coefs,
 
-		         totalIter = cret$totalIter,
-		         t.elapsed = cret$t.elapsed,
+                 totalIter = cret$totalIter,
+                 t.elapsed = cret$t.elapsed,
                  na.action = var.info$nac );
 
-    if (cross > 0 )
+	if (cross > 0 )
 	{
 		if (inherits(x, "BigMatrix.refer") ) bigm.push(x);
 		cross.ret <- cross_validation( y, x, param );
 		if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 		
-	    ret$cross <- param$cross;
-	    ret$rough.cross <- param$rough.cross ;
+		ret$cross <- param$cross;
+		ret$rough.cross <- param$rough.cross ;
 
         if ( type > 2) 
         {
@@ -398,7 +399,7 @@ svm.default <- function (x,
 	ret$host <-  try(system("hostname", intern = TRUE),silent=T);
 	class (ret) <- "gtsvm"
 
-    if (fitted) {
+	if (fitted) {
     	if(type == C_CLASSFICATION)
     	{
 			org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
