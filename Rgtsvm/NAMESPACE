@@ -15,6 +15,7 @@ export(svm)
 export(attach.bigmatrix)
 export(load.bigmatrix)
 
+export(predict.batch)
 export(predict.gtsvm)
 export(print.gtsvm)
 export(tune.svm)

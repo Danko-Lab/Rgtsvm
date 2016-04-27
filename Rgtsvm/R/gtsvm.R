@@ -13,30 +13,30 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 		cat("* Lable=", y0, length(which( y == y0 ) ), "\n");
 		y.idx <- c( y.idx, which( y == y0 ) );
 	}
-	
+
 	y <- y[y.idx];
-	
+
 	if ( inherits(x, "BigMatrix.refer") )
 		bigm.subset(x, rows=y.idx)
 	else
 		x <- x[y.idx,];
-	
+
 	y0 <- y;
     if( param$nclass==2 )
 		y <- as.integer( c(-1, 1)[y] );
-	
+
     # GTSVM only support the un-biased classification for mulri-class.
     if (param$nclass>2) param$biased<-FALSE;
-   
+
 	if( sys.nframe()> 6)
 	{
-		func.call <- try( as.character( as.list(sys.call(-5))[[1]]) ) 
+		func.call <- try( as.character( as.list(sys.call(-5))[[1]]) )
 		if( func.call == "tune" ) ignoreNoProgress <- TRUE;
 	}
 
  	ptm <- proc.time();
 	nr  <- NROW(x);
-	
+
 	if(is.null(param$class.weights))
 		param$class.weights <- rep(1, param$nclass);
 
@@ -46,14 +46,14 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 				as.double  (if (param$sparse) x@ra else x),
                 as.integer64 (if (param$sparse) (x@ia)-1 else 0), #offset values start from 0
                 as.integer64 (if (param$sparse) (x@ja)-1 else 0), #index values start from 1
-                as.integer (NROW(x)), 
+                as.integer (NROW(x)),
                 as.integer (NCOL(x)),
-                as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)), 
+                as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)),
                 as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.ncol( x ) else NCOL(x)),
 				as.integer (if ( class(x)=="BigMatrix.refer") bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
 				as.integer (if ( class(x)=="BigMatrix.refer") bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
                 ## sparse index info
-				
+
 				## for multiclass, the values are from 0 to nclass-1. but for binary, the values are 1 and -1
 				## the data from R starts from 1
                 if(param$nclass>2 ) as.double(y)-1 else as.double(y),
@@ -74,7 +74,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
                 as.integer (param$fitted),
                 as.integer (param$biased),
                 ## maxItern = NROW(x)*100;
-                as.integer (NROW(x)*100),		
+                as.integer (NROW(x)*100),
 				as.integer (ignoreNoProgress),
 
                 ## results
@@ -82,7 +82,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 			    ## the total number of classes
                 nclasses = integer  (1),
                 ## nr of support vectors
-                nr       = integer  (1), 			
+                nr       = integer  (1),
                 ## the index of support vectors
                 index    = integer  (nr),
 				## the labels of classes
@@ -99,12 +99,12 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
                 DUP 	 = FALSE,
                 PACKAGE  = "Rgtsvm");
 
-    t.elapsed <- proc.time() - ptm;      
+    t.elapsed <- proc.time() - ptm;
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
-	
-	cret$t.elapsed <- t.elapsed; 
-    
+
+	cret$t.elapsed <- t.elapsed;
+
     gtsvm.class <- ifelse( cret$nclasses==2, 1, cret$nclasses );
 
 	if( final.result )
@@ -115,27 +115,27 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
             degree    = param$degree,
             gamma     = param$gamma,
             coef0     = param$coef0,
-            cost      = param$cost,		
+            cost      = param$cost,
 			sparse    = param$sparse,
-			
+
 			#number of classes
-			nclasses  = cret$nclasses,  
+			nclasses  = cret$nclasses,
 			# total number of sv
 			nr        = cret$nr,
-			tot.nSV   = cret$nr, 		
-			
+			tot.nSV   = cret$nr,
+
 			index     = cret$index,
 			nSV       = cret$nSV,
 			rho       = cret$rho,
 			labels    = cret$labels,
 			coefs     = cret$coefs,
-			
+
 			totalIter = cret$totalIter,
 			t.elapsed = cret$t.elapsed );
     }
 
 	#index of SV points
-	cret$index <- cret$index[1:cret$nr];  
+	cret$index <- cret$index[1:cret$nr];
 	# number of SV in diff. classes
 	cret$nSV   <- cret$nSV[1:cret$nclasses];
 	cret$SV    <- if (param$sparse) SparseM::t(SparseM::t(x[cret$index,])) else x[cret$index,,drop=F];
@@ -150,8 +150,8 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 		 cret$coefs <- cret$coefs[1:cret$nr] * as.integer( y [ cret$index ] );
 
 	if( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
-    
-    return(cret);    
+
+    return(cret);
 }
 
 
@@ -171,7 +171,7 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
                as.double  (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
                as.integer64 (if (obj.train$sparse) obj.train$SV@ia-1 else 0),
                as.integer64 (if (obj.train$sparse) obj.train$SV@ja-1 else 0),
-               as.integer (NROW(obj.train$SV)), 
+               as.integer (NROW(obj.train$SV)),
                as.integer (NCOL(obj.train$SV)),
 			   as.integer (c(1:NROW(obj.train$SV))-1 ),
 			   as.integer (c(1:NCOL(obj.train$SV))-1 ),
@@ -194,7 +194,7 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
                as.integer64 (if (x.sparse) x@ia-1 else 0),
                as.integer64 (if (x.sparse) x@ja-1 else 0),
                as.integer (NROW(x)),
-               as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)), 
+               as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)),
                as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.ncol( x ) else NCOL(x)),
 			   as.integer (if ( inherits(x, "BigMatrix.refer") ) bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
 			   as.integer (if ( inherits(x, "BigMatrix.refer") ) bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
@@ -224,16 +224,16 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
 	{
 		bigm.push(x);
 		bigm.rbindcopy(x);
-	}	
+	}
 	else
 		x <- rbind(x, x);
 
 	y <- c(y1, y1);
-	
+
 	nr <- nrow(x);
     maxIter <- nr * 100;
 
-	if( sys.nframe()> 6  && as.character( as.list(sys.call(-5))[[1]])=="tune" ) 
+	if( sys.nframe()> 6  && as.character( as.list(sys.call(-5))[[1]])=="tune" )
 		ignoreNoProgress <- TRUE;
 
  	ptm <- proc.time();
@@ -245,9 +245,9 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
                	## sparse index info
                 as.integer64 (if (param$sparse) (x@ia)-1 else 0), #offset values start from 0
                 as.integer64 (if (param$sparse) (x@ja)-1 else 0), #index values start from 1
-                as.integer (NROW(x)), 
+                as.integer (NROW(x)),
                 as.integer (NCOL(x)),
-                as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)), 
+                as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)),
                 as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.ncol( x ) else NCOL(x)),
 				as.integer (if ( class(x)=="BigMatrix.refer") bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
 				as.integer (if ( class(x)=="BigMatrix.refer") bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
@@ -264,7 +264,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
 				as.double  (param$coef0),
                 ## regularization
 				as.double  (param$cost),
-				
+
                 as.double  (param$tolerance),
                 as.double  (param$epsilon),
                 as.integer (param$shrinking),
@@ -275,7 +275,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
                 ## results
 		        totalIter= integer  (1),
                 ## nr of support vectors
-                nr       = integer  (1), 			
+                nr       = integer  (1),
                 ## the index of support vectors
                 index    = integer  (nr),
 				## the labels of classes
@@ -283,7 +283,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
                 ## the support vectors of each classes
                 nSV      = integer  (param$nclass),
                 rho      = double   (1),
-                ## alpha values 
+                ## alpha values
                 coefs    = double(nr),
                 ## prdict labels for the fitted option
                 predict  = double   (nr),
@@ -292,40 +292,40 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
                 error = as.integer(1),
                 DUP 	 = FALSE,
                 PACKAGE  = "Rgtsvm");
-          
-    t.elapsed <- proc.time() - ptm;      
+
+    t.elapsed <- proc.time() - ptm;
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
-  	
-	cret$t.elapsed <- t.elapsed; 
+
+	cret$t.elapsed <- t.elapsed;
 	cret$nclasses  <- 2;
 	cret$nSV       <- c(0,0);
 	cret$labels    <- c(0,0);
-	
+
 	if(final.result)
     {
     	cret$index  <- cret$index[1:cret$nr]
     	gtsvm.class <- 1;
-    	
+
 		cret <- list (
             ## parameter
             kernel    = param$kernel,
             degree    = param$degree,
             gamma     = param$gamma,
             coef0     = param$coef0,
-            cost      = param$cost,		
+            cost      = param$cost,
 			sparse    = param$sparse,
-			
+
 			#number of classes
-			nclasses  = 1,  
+			nclasses  = 1,
 			# total number of sv
-			tot.nSV   = cret$nr, 		
+			tot.nSV   = cret$nr,
 			# number of SV in diff. classes
-			nSV       = cret$nSV, 
+			nSV       = cret$nSV,
 			# labels of the SVs.
-			labels    = cret$labels, 
+			labels    = cret$labels,
 			# indexes of sv in x
-			index     = cret$index,  
+			index     = cret$index,
 			##constants in decision functions
 			rho       = cret$rho,
             ## coefficiants of sv
@@ -335,10 +335,10 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
     }
 
 	cret$SV <- if (param$sparse) SparseM::t(SparseM::t(x[cret$index,])) else x[cret$index,,drop=F]; #copy of SV
-    
+
 	if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
-    
-    return(cret);    
+
+    return(cret);
 }
 
 
@@ -358,13 +358,13 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
                	as.double  (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
                	as.integer64 (if (obj.train$sparse) obj.train$SV@ia-1 else 0),
                	as.integer64 (if (obj.train$sparse) obj.train$SV@ja-1 else 0),
-               	as.integer (NROW(obj.train$SV)), 
+               	as.integer (NROW(obj.train$SV)),
                	as.integer (NCOL(obj.train$SV)),
 			   	as.integer (c(1:NROW(obj.train$SV))-1 ),
 			   	as.integer (c(1:NCOL(obj.train$SV))-1 ),
                	as.integer (obj.train$tot.nSV),
-			   
-			   	## to-do list	
+
+			   	## to-do list
                	as.double  (obj.train$rho),
                	as.double  (as.vector(obj.train$coefs)),
 
@@ -381,7 +381,7 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
                	as.integer64 (if (x.sparse) x@ia-1 else 0),
                	as.integer64 (if (x.sparse) x@ja-1 else 0),
                	as.integer (nrow(x)),
-               	as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)), 
+               	as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)),
                	as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.ncol( x ) else NCOL(x)),
 			   	as.integer (if ( class(x)=="BigMatrix.refer") bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
 			   	as.integer (if ( class(x)=="BigMatrix.refer") bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
@@ -397,8 +397,118 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
                	PACKAGE = "Rgtsvm");
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
-    
+
 	cret$t.elapsed <- proc.time() - ptm;
-	
+
+	return(cret);
+}
+
+
+gtsvmpredict.regression.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=TRUE )
+{
+	ptm <- proc.time();
+
+    cret <- .C ("gtsvmpredict_epsregression_batch",
+               	as.integer (param$decision.values),
+               	as.integer (param$probability),
+
+               	## model
+               	as.integer (obj.train$sparse),
+               	as.double  (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
+               	as.integer64 (if (obj.train$sparse) obj.train$SV@ia-1 else 0),
+               	as.integer64 (if (obj.train$sparse) obj.train$SV@ja-1 else 0),
+               	as.integer (NROW(obj.train$SV)),
+               	as.integer (NCOL(obj.train$SV)),
+			   	as.integer (c(1:NROW(obj.train$SV))-1 ),
+			   	as.integer (c(1:NCOL(obj.train$SV))-1 ),
+               	as.integer (obj.train$tot.nSV),
+
+				## model ( rho and coefs )
+               	as.double  (obj.train$rho),
+               	as.double  (as.vector(obj.train$coefs)),
+
+               	## parameter
+               	as.integer (obj.train$kernel),
+               	as.integer (obj.train$degree),
+               	as.double  (obj.train$gamma),
+               	as.double  (obj.train$coef0),
+               	as.double  (obj.train$cost),
+               	as.double  (obj.train$x.scale$"scaled:center"),
+               	as.double  (obj.train$x.scale$"scaled:scale"),
+
+               	## test matrix
+               	as.character ( file.rds ),
+               	as.integer ( length(file.rds) ),
+
+               	## decision-values
+               	ret = double( x.count ),
+               	dec = double( x.count ),
+               	prob = double( x.count * obj.train$nclasses ),
+
+               	as.integer(verbose),
+               	error = as.integer(1),
+               	DUP 	= TRUE,
+               	PACKAGE = "Rgtsvm");
+
+    if ( cret$error!=0 ) stop("Error in GPU process.")
+
+	cret$t.elapsed <- proc.time() - ptm;
+
+	return(cret);
+}
+
+gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=TRUE )
+{
+	ptm <- proc.time();
+
+    cret <- .C ("gtsvmpredict_classfication_batch",
+               	as.integer (param$decision.values),
+               	as.integer (param$probability),
+
+               	## model
+               	as.integer (obj.train$sparse),
+               	as.double  (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
+               	as.integer64 (if (obj.train$sparse) obj.train$SV@ia-1 else 0),
+               	as.integer64 (if (obj.train$sparse) obj.train$SV@ja-1 else 0),
+               	as.integer (NROW(obj.train$SV)),
+               	as.integer (NCOL(obj.train$SV)),
+			   	as.integer (c(1:NROW(obj.train$SV))-1 ),
+			   	as.integer (c(1:NCOL(obj.train$SV))-1 ),
+               	as.integer (obj.train$tot.nSV),
+
+				## model ( rho and coefs )
+               	as.double  (obj.train$rho),
+               	as.double  (as.vector(obj.train$coefs)),
+               	as.integer (obj.train$nclasses),
+
+               	## parameter
+               	as.integer (obj.train$kernel),
+               	as.integer (obj.train$degree),
+               	as.double  (obj.train$gamma),
+               	as.double  (obj.train$coef0),
+               	as.double  (obj.train$cost),
+               	as.double  (obj.train$x.scale$"scaled:center"),
+               	as.double  (obj.train$x.scale$"scaled:scale"),
+
+               	## test matrix
+               	as.character ( file.rds ),
+               	as.integer ( length(file.rds) ),
+
+               	## decision-values
+               	ret = double( x.count ),
+               	dec = double( x.count  ),
+               	prob = double( x.count * obj.train$nclasses ),
+
+               	as.integer(verbose),
+               	error = as.integer(1),
+               	DUP 	= TRUE,
+               	PACKAGE = "Rgtsvm");
+
+    if ( cret$error!=0 ) stop("Error in GPU process.")
+
+	cret$t.elapsed <- proc.time() - ptm;
+
+	if( obj.train$nclasses > 2 ) cret$ret <- cret$ret + 1;
+
 	return(cret);
 }
