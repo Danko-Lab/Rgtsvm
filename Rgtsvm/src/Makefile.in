@@ -8,6 +8,7 @@
 # Compilers
 EXT := cu
 
+CXX := g++
 NVCC := @NVCC@
 CXXFLAGS := @CXXFLAGS@
 NVCCFLAGS := @NCFLAGS@
