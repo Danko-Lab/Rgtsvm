@@ -823,7 +823,7 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
         }
 }
 
-predict.batch <- function (object, file.rds, decision.values = FALSE, probability = FALSE, ..., na.action = na.omit)
+predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, ..., na.action = na.omit)
 {
     if (missing(file.rds))
         stop("No RDS files are specified.\n");
