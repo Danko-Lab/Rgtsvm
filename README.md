@@ -5,7 +5,7 @@ The e1071 compatiblility SVM package for GPU architecture based on the GTSVM sof
 ## Intoduction:
 
 SVM is a popular and powerful machine learning method for classification, regression, and other learning tasks. In the R community, many users use the e1071 package, which offers an interface to the
-C++ implementation of libsvm, featuring with C classification, eps classification, one class classification, eregression, v regression, cross validation, parameter tuning and four kernels (linear, polynomial, radial
+C++ implementation of libsvm, featuring with C classification, epsilon regression, one class classification, eregression, v regression, cross validation, parameter tuning and four kernels (linear, polynomial, radial
 basis function, and sigmoidal kernels formula). Although this implementation is widely used, it is not sufficiently fast to handle largescale classification or regression tasks.
 
 To improve the performance, we have recently implemented SVMs on a graphical processing unit (GPU). GPUs are a massively parallel execution environment that provide many advantages when computing SVMs: 
@@ -84,9 +84,9 @@ Rgtsvm implement the following functions on GPU package(GTSVM)
 
 > `svm`: a function to train a support vector machine by the C-classfication method and epsilon regression on GPU
 
-> `predict`: a function to predict values based upon a model trained by `svm` in package Rgtsvm.
+> `predict`: a function to predict values based upon a model trained by `svm` in package Rgtsvm
 
-> `tune`: a function to tune hyperparameters of statistical methods using a grid search over supplied parameter ranges.
+> `tune`: a function to tune hyperparameters of statistical methods using a grid search over supplied parameter ranges
 
 > `plot.tune`: visualizes the results of parameter tuning
 
