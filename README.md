@@ -33,7 +33,7 @@ Firstly our implementation is encapsulated in one R package which is backwardsco
 
 The package has the following features:
 
-> 1) Binary classification, multiclass classification and e regression
+> 1) Binary classification, multiclass classification and epsilon regression
 
 > 2) 4 kernel functions (linear, polynomial, radial basis function and sigmoidal kernel)
 
@@ -82,7 +82,7 @@ R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$B
 
 Rgtsvm implement the following functions on GPU package(GTSVM)
 
-> `svm`: a function to train a support vector machine by the C-classfication method and eps-regression on GPU
+> `svm`: a function to train a support vector machine by the C-classfication method and epsilon regression on GPU
 
 > `predict`: a function to predict values based upon a model trained by `svm` in package Rgtsvm.
 
@@ -100,11 +100,9 @@ library(Rgtsvm);
 ?svm
 
 model <- svm(Species ~ ., data = iris);
-
-
 ```
 
-Installation instructions on *stampede.tacc.xsede.org*
+###Installation instructions on *stampede.tacc.xsede.org*
 -----------
 
 ```
@@ -116,7 +114,7 @@ R CMD INSTALL --configure-args="--with-cuda-home=/opt/apps/cuda/6.5 --with-boost
 ```
 
 
-Installation instructions on *supermic.cct-lsu.xsede.org*
+###Installation instructions on *supermic.cct-lsu.xsede.org*
 -----------
 
 ```
