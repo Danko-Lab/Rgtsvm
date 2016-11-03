@@ -1602,7 +1602,7 @@ extern "C" void bigmatrix_set_bycols (
 		   int* pNLen,
 		   double *pValue)
 {
-	Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
+	// Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
 
 	int nrow = *pNRow;
 
@@ -1627,7 +1627,7 @@ extern "C" void bigmatrix_set_byrows (
 		   int* pNLen,
 		   double *pValue)
 {
-	Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
+	// Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
 
 	int ncol = *pNCol;
 	int nrow = *pNRow;

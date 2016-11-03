@@ -7,7 +7,7 @@
 \alias{print.gtsvm}
 \title{Training a model of Support Vector Machines by GPU}
 \description{
-\code{svm} in \emph{Rgtsvm} pakcage is used to train a support vector machine by the C-classfication method.  A formula interface is provided. 
+\code{svm} in \emph{Rgtsvm} pakcage is used to train a support vector machine by the C-classfication and epsilon regression method.  A formula interface is provided. 
 }
 \usage{
 \method{svm}{formula}(formula, data = NULL, ..., na.action = na.omit, scale = TRUE);
@@ -47,7 +47,7 @@
     Per default, data are scaled internally (both \code{x} and \code{y}
     variables) to zero mean and unit variance. The center and scale
     values are returned and used for later predictions.}
-  \item{type}{only \code{C-classification} available. }
+  \item{type}{only \code{C-classification} or \code{eps-regression} available. }
   \item{kernel}{the kernel used in training and predicting. You
     might consider changing some of the following parameters, depending
     on the kernel type.\cr
