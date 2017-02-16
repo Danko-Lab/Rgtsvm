@@ -51,7 +51,7 @@ LIBS="-lcuda -lcublas"
 AC_ARG_WITH([boost-home],
 	[AC_HELP_STRING([--with-boost-home=DIR],
 		[full path to BOOST installation @<:@/usr/local/boost@:>@])],
-	[BOOST_HOME="$withval"], [BOOST_HOME=/usr/local/cuda])
+	[BOOST_HOME="$withval"], [BOOST_HOME=/usr/local/boost])
 AC_MSG_RESULT([setting BOOST home directory to ${BOOST_HOME}])
 
 BOOST_INC=${BOOST_HOME}/include
