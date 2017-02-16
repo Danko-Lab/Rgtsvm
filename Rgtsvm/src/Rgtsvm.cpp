@@ -159,7 +159,7 @@ extern "C" void gtsvmtrain_epsregression (
 	if(*pSparse) szSparse='S';
 
 	unsigned int nSample = (*pXrow)/2;
-	Rprintf("[e-SVR training] X = [%d,%d%c] kernel = %d degree = %f gamma = %f, c0 = %f C = %f\n",
+	if(*pVerbose) Rprintf("[e-SVR training] X = [%d,%d%c] kernel = %d degree = %f gamma = %f, c0 = %f C = %f\n",
 			nSample, *pXcol, szSparse, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	boost::shared_array< float > pLinearTerm( new float[ *pXrow ] );
@@ -240,7 +240,7 @@ extern "C" void gtsvmtrain_epsregression (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("[e-SVR training] MaxIter=%d tolerance=%f epsilon=%f \n", *pMaxIter, *pTolerance, *pEpsilon );
+	if(*pVerbose) Rprintf("[e-SVR training] MaxIter=%d tolerance=%f epsilon=%f \n", *pMaxIter, *pTolerance, *pEpsilon );
 
 	// must be a multiple of 16
 	unsigned int const repetitions = 256;
@@ -255,7 +255,8 @@ extern "C" void gtsvmtrain_epsregression (
 		primal = result.first;
 		dual   = result.second;
 
-		if(*pVerbose) Rprintf("ii=%d, %f, %f m_bias=%f\n", ii, primal, dual, psvm->GetBias());
+		//for debug
+		//if(*pVerbose) Rprintf("ii=%d, %f, %f m_bias=%f\n", ii, primal, dual, psvm->GetBias());
 
 		if ( 2 * ( primal - dual ) < (*pTolerance) * ( primal + dual ) )
 			break;
@@ -316,7 +317,7 @@ extern "C" void gtsvmtrain_epsregression (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("[e-SVR training] Iteration=%d SV.number=%d rho=%f\n", *npTotalIter, *pSV, *pRho );
+	if(*pVerbose) Rprintf("[e-SVR training] Iteration=%d SV.number=%d rho=%f\n", *npTotalIter, *pSV, *pRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -367,7 +368,7 @@ extern "C" void gtsvmtrain_epsregression (
 		_CHECK_EXCEPTIONS_
 	}
 
-	Rprintf("[e-SVR training] DONE!\n");
+	if(*pVerbose) Rprintf("[e-SVR training] DONE!\n");
 
 }
 
@@ -428,7 +429,7 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 
 	*pnError = 0;
 
-	Rprintf("[e-SVR batch#] X=[?,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+	if (*pVerbose) Rprintf("[e-SVR batch#] X=[?,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
 			 *pModelCol, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	_TRY_EXCEPTIONS_
@@ -502,7 +503,7 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("[e-SVR batch#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
+	if(*pVerbose) Rprintf("[e-SVR batch#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -522,7 +523,7 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 		char szCmd[1024]={0};
 		sprintf( szCmd, "readRDS('%s')", pszRDSfile[k] );
 
-		Rprintf("               Loading %s\n", pszRDSfile[k] );
+		if(*pVerbose) Rprintf("               Loading %s\n", pszRDSfile[k] );
 
 		SEXP pNewData = run_script( szCmd );
 
@@ -574,7 +575,7 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 		_CHECK_EXCEPTIONS_
 	}
 
-	Rprintf("[e-SVR batch#] DONE!\n");
+	if(*pVerbose) Rprintf("[e-SVR batch#] DONE!\n");
 }
 
 
@@ -640,7 +641,7 @@ extern "C" void gtsvmpredict_epsregression  (
 
 	*pnError = 0;
 
-	Rprintf("[e-SVR predict#] X=%d[%d,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+	if(*pVerbose) Rprintf("[e-SVR predict#] X=%d[%d,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
 			*pSparseX, *pXrow, *pModelCol, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	_TRY_EXCEPTIONS_
@@ -714,7 +715,7 @@ extern "C" void gtsvmpredict_epsregression  (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("[e-SVR predict#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
+	if(*pVerbose) Rprintf("[e-SVR predict#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -768,7 +769,7 @@ extern "C" void gtsvmpredict_epsregression  (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("[e-SVR predict#] DONE!\n");
+	if(*pVerbose) Rprintf("[e-SVR predict#] DONE!\n");
 }
 
 extern "C" void gtsvmtrain_classfication (
@@ -857,7 +858,7 @@ extern "C" void gtsvmtrain_classfication (
 		kernelParameter3 = 1;
 	}
 
-	Rprintf("[C-SVC training] X=%d[%d,%d] nclasses=%d biased=%d kernel=%d degree=%f gamma=%f, c0=%f C=%f tolerance=%f\n",
+	if(*pVerbose) Rprintf("[C-SVC training] X=%d[%d,%d] nclasses=%d biased=%d kernel=%d degree=%f gamma=%f, c0=%f C=%f tolerance=%f\n",
 			*pSparse, *pXrow, *pXcol, nclasses, *pBiased, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization, *pTolerance );
 
 	_TRY_EXCEPTIONS_
@@ -946,7 +947,7 @@ extern "C" void gtsvmtrain_classfication (
 	// for multiclass, m_classes = nclasses, but for binary classfication, m_classes is 1!!!
 	*pClasses = (multiclass) ? psvm->GetClasses() : psvm->GetClasses() + 1;
 
-	Rprintf("[C-SVC training] MaxIter=%d tolerance=%f class=%d \n", *pMaxIter, *pTolerance, *pClasses );
+	if(*pVerbose) Rprintf("[C-SVC training] MaxIter=%d tolerance=%f class=%d \n", *pMaxIter, *pTolerance, *pClasses );
 
 	// must be a multiple of 16
 	unsigned int const repetitions = 256;
@@ -961,7 +962,8 @@ extern "C" void gtsvmtrain_classfication (
 		primal = result.first;
 		dual   = result.second;
 
-		if(*pVerbose) Rprintf("ii=%d, %f, %f m_bias=%f\n", ii, primal, dual, psvm->GetBias());
+		// for debug
+		//if(*pVerbose) Rprintf("ii=%d, %f, %f m_bias=%f\n", ii, primal, dual, psvm->GetBias());
 
 		if ( 2 * ( primal - dual ) < (*pTolerance) * ( primal + dual ) )
 			break;
@@ -1029,7 +1031,7 @@ extern "C" void gtsvmtrain_classfication (
 
 	*pRho = -1.0 * psvm->GetBias();
 
-	Rprintf("[C-SVC training] Iteration=%d SV.number=%d rho=%f\n", *npTotal_iter, *pSV, *pRho );
+	if(*pVerbose) Rprintf("[C-SVC training] Iteration=%d SV.number=%d rho=%f\n", *npTotal_iter, *pSV, *pRho );
 
 	_TRY_EXCEPTIONS_
 
@@ -1122,7 +1124,7 @@ extern "C" void gtsvmtrain_classfication (
 		_CHECK_EXCEPTIONS_
 	}
 
-	Rprintf("[C-SVC training] DONE!\n");
+	if(*pVerbose) Rprintf("[C-SVC training] DONE!\n");
 
 }
 
@@ -1192,7 +1194,7 @@ extern "C" void gtsvmpredict_classfication  (
 
 	*pnError = 0;
 
-	Rprintf("[C-SVC predict*] X=%d[%d,%d] nclasses=%d, kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+	if(*pVerbose) Rprintf("[C-SVC predict*] X=%d[%d,%d] nclasses=%d, kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
 			*pSparseX, *pXrow, *pModelCol, nclasses, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	_TRY_EXCEPTIONS_
@@ -1270,7 +1272,7 @@ extern "C" void gtsvmpredict_classfication  (
 
 	unsigned int ncol = psvm->GetClasses();
 
-	Rprintf("[C-SVC predict*] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
+	if(*pVerbose) Rprintf("[C-SVC predict*] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
 
 	boost::shared_array< double > result( new double[ (*pXrow) * ncol ] );
 
@@ -1339,7 +1341,7 @@ extern "C" void gtsvmpredict_classfication  (
 		}
 	}
 
-	Rprintf("[C-SVC predict*] DONE!\n");
+	if(*pVerbose) Rprintf("[C-SVC predict*] DONE!\n");
 }
 
 
@@ -1406,7 +1408,7 @@ extern "C" void gtsvmpredict_classfication_batch  (
 
 	*pnError = 0;
 
-	Rprintf("[C-SVC batch*] X=[?,%d] nclasses=%d, kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+	if(*pVerbose) Rprintf("[C-SVC batch*] X=[?,%d] nclasses=%d, kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
 			*pModelCol, nclasses, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
 
 	_TRY_EXCEPTIONS_
@@ -1482,7 +1484,7 @@ extern "C" void gtsvmpredict_classfication_batch  (
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 
-	Rprintf("[C-SVC batch*] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
+	if(*pVerbose) Rprintf("[C-SVC batch*] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
 
 	unsigned int nclass = psvm->GetClasses();
 
@@ -1495,7 +1497,8 @@ extern "C" void gtsvmpredict_classfication_batch  (
 
 		// load RDS file and get row count and column count.
 		sprintf( szCmd, "readRDS('%s')", pszRDSfile[k] );
-		Rprintf("               Loading %s\n", pszRDSfile[k] );
+		if(*pVerbose) Rprintf("               Loading %s\n", pszRDSfile[k] );
+
 		SEXP pNewData = run_script( szCmd );
 	    SEXP dims = getAttrib(pNewData, R_DimSymbol);
 	    if (length(dims) == 2)
@@ -1562,7 +1565,7 @@ extern "C" void gtsvmpredict_classfication_batch  (
 		nOffsetret = nOffsetret + nRow;
 	}
 
-	Rprintf("[C-SVC batch#] DONE!\n");
+	if(*pVerbose) Rprintf("[C-SVC batch#] DONE!\n");
 }
 
 
@@ -1602,7 +1605,7 @@ extern "C" void bigmatrix_set_bycols (
 		   int* pNLen,
 		   double *pValue)
 {
-	Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
+	// Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
 
 	int nrow = *pNRow;
 
@@ -1627,7 +1630,7 @@ extern "C" void bigmatrix_set_byrows (
 		   int* pNLen,
 		   double *pValue)
 {
-	Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
+	// Rprintf("Address=%x nrow=%d, ncol=%d, nlen=%d\n", pMat, *pNRow, *pNCol, *pNLen);
 
 	int ncol = *pNCol;
 	int nrow = *pNRow;

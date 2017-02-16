@@ -205,16 +205,16 @@ svm.default <- function (x,
           gamma       = if (is.vector(x)) 1 else 1 / ncol(x),
           coef0       = 0,
           cost        = 1,
+          class.weights= NULL,
           tolerance   = 0.001,
           epsilon     = 0.1,
           shrinking   = TRUE,
-          fitted      = TRUE,
           cross       = 0,
-          rough.cross = 0,
           probability = FALSE,
+          fitted      = TRUE,
+          rough.cross = 0,
           no.change.x = TRUE,
           verbose     = FALSE,
-          class.weights= NULL,
           ...,
           subset,
           na.action = na.omit)
@@ -555,6 +555,7 @@ cross_validation <- function ( y, x, param )
 predict.gtsvm <- function (object, newdata,
           decision.values = FALSE,
           probability = FALSE,
+          verbose = FALSE,
           ...,
           na.action = na.omit)
 {
@@ -646,9 +647,9 @@ predict.gtsvm <- function (object, newdata,
 
 	# Call C/C++ interface to do predict
 	if(object$type == C_CLASSFICATION)
-		ret <- gtsvmpredict.classfication.call( newdata, sparse, object, param)
+		ret <- gtsvmpredict.classfication.call( newdata, sparse, object, param, verbose=verbose)
 	else if(object$type == EPSILON_SVR)
-		ret <- gtsvmpredict.regression.call( newdata, sparse, object, param)
+		ret <- gtsvmpredict.regression.call( newdata, sparse, object, param, verbose=verbose)
 	else
 		stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
 
@@ -823,7 +824,7 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
         }
 }
 
-predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, ..., na.action = na.omit)
+predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, verbose = FALSE, ..., na.action = na.omit)
 {
     if (missing(file.rds))
         stop("No RDS files are specified.\n");
@@ -854,9 +855,9 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
 
 	# Call C/C++ interface to do predict
 	if(object$type == C_CLASSFICATION)
-		ret <- gtsvmpredict.classfication.batch.call( file.rds, x.count, object, param)
+		ret <- gtsvmpredict.classfication.batch.call( file.rds, x.count, object, param, verbose=verbose)
 	else if(object$type == EPSILON_SVR)
-		ret <- gtsvmpredict.regression.batch.call( file.rds, x.count, object, param)
+		ret <- gtsvmpredict.regression.batch.call( file.rds, x.count, object, param, verbose=verbose)
 	else
 		stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
 

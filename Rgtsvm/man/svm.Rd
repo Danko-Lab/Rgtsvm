@@ -7,7 +7,7 @@
 \alias{print.gtsvm}
 \title{Training a model of Support Vector Machines by GPU}
 \description{
-\code{svm} in \emph{Rgtsvm} pakcage is used to train a support vector machine by the C-classfication method.  A formula interface is provided. 
+\code{svm} in \emph{Rgtsvm} pakcage is used to train a support vector machine by the C-classfication and epsilon regression method.  A formula interface is provided. 
 }
 \usage{
 \method{svm}{formula}(formula, data = NULL, ..., na.action = na.omit, scale = TRUE);
@@ -21,10 +21,18 @@
       gamma       = 0.05,
       coef0       = 0,
       cost        = 1,
-      epsilon     = 0.01,
+      class.weights= NULL,
+      tolerance   = 0.001,
+      epsilon     = 0.1,
       shrinking   = TRUE,
+      cross       = 0,
+      probability = FALSE,
       fitted      = TRUE,
+      rough.cross = 0,
+      no.change.x = TRUE,
+      verbose     = FALSE,
       ...,
+      subset,
       na.action = na.omit)
 }
 \arguments{
@@ -47,7 +55,7 @@
     Per default, data are scaled internally (both \code{x} and \code{y}
     variables) to zero mean and unit variance. The center and scale
     values are returned and used for later predictions.}
-  \item{type}{only \code{C-classification} available. }
+  \item{type}{only \code{C-classification} or \code{eps-regression} available. }
   \item{kernel}{the kernel used in training and predicting. You
     might consider changing some of the following parameters, depending
     on the kernel type.\cr
@@ -65,13 +73,29 @@
     and \code{sigmoid} (default: 0)}
   \item{cost}{cost of constraints violation (default: 1)---it is the
     \sQuote{C}-constant of the regularization term in the Lagrange formulation.}
-  \item{epsilon}{tolerance of termination criterion (default: 0.01)}
+  \item{class.weights}{a named vector of weights for the different
+    classes, used for asymmetric class sizes. Not all factor levels have
+    to be supplied (default weight: 1). All components have to be named.}
+  \item{tolerance}{tolerance of termination criterion (default: 0.001)}
+  \item{epsilon}{epsilon in the insensitive-loss function (default: 0.1)}
   \item{shrinking}{option whether to use the shrinking-heuristics
     (default: \code{TRUE})}
+  \item{cross}{if a integer value k>0 is specified, a k-fold cross
+    validation on the training data is performed to assess the quality
+    of the model: the accuracy rate for classification and the Mean
+    Squared Error for regression}
   \item{fitted}{logical indicating whether the fitted values should be computed
     and included in the model or not (default: \code{TRUE})}
+  \item{probability}{logical indicating whether the model should
+    allow for probability predictions.}
+  \item{rough.cross}{Number which is less than \code{cross}, indicating how many tests are performed for cross-validation. The function will return partial tests for cross-validation rather than all repeated tests in order to reduce the running time. }
+  \item{no.change.x}{Logical value indicating whther tne function can change the \code{x} parameter. If \code{x} is a big matrix, it would be save emeory to use this parameter \code{FALSE}. }
+  \item{verbose}{logical value indicating whether some alogrithm information(default:FALSE)}
   \item{\dots}{additional parameters for the low level fitting function
     \code{svm.default}}
+  \item{subset}{An index vector specifying the cases to be used in the
+          training sample.  (NOTE: If given, this argument must be
+          named.)}
   \item{na.action}{A function to specify the action to be taken if \code{NA}s are
           found. The default action is \code{na.omit}, which leads to rejection of cases
           with missing values on any required variable. An alternative
@@ -107,7 +131,7 @@
   }
 }
 \author{
-  Zhong Wang ( R interface )  \email{zw355@cornell.edu}\cr
+  Zhong Wang ( R interface & epe-regression in CUDA )  \email{zw355@cornell.edu}\cr
   David Meyer ( R interface in e1071)  \email{David.Meyer@R-project.org} \cr
   Andrew Cotter, Nathan Srebro ,Joseph Keshet ( C/C++ code in CUDA )  \link{http://ttic.uchicago.edu/~cotter/projects/gtsvm/} \cr
 }

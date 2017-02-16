@@ -1,9 +1,7 @@
 trim.space <- function (x) gsub("^\\s+|\\s+$", "", x)
 
-gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose=TRUE, ignoreNoProgress=FALSE)
+gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose=FALSE, ignoreNoProgress=FALSE)
 {
-	### verbose <- FALSE;
-
 	if( inherits(x, "BigMatrix.refer") ) bigm.push(x);
 
 	y.org <- y;
@@ -155,7 +153,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 }
 
 
-gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=TRUE )
+gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=FALSE )
 {
     if (ncol(obj.train$SV) != ncol(x))
         stop ("test data does not match model !")
@@ -218,7 +216,7 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
 	return(cret);
 }
 
-gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=TRUE, ignoreNoProgress=FALSE)
+gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=FALSE, ignoreNoProgress=FALSE)
 {
 	if ( inherits(x, "BigMatrix.refer") )
 	{
@@ -342,7 +340,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=T
 }
 
 
-gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=TRUE )
+gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=FALSE )
 {
     if (ncol(obj.train$SV) != ncol(x))
         stop ("test data does not match model !")
@@ -404,7 +402,7 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
 }
 
 
-gtsvmpredict.regression.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=TRUE )
+gtsvmpredict.regression.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=FALSE )
 {
 	ptm <- proc.time();
 
@@ -457,7 +455,7 @@ gtsvmpredict.regression.batch.call<-function( file.rds, x.count, obj.train, para
 	return(cret);
 }
 
-gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=TRUE )
+gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=FALSE )
 {
 	ptm <- proc.time();
 
