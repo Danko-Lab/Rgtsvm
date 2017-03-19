@@ -21,7 +21,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 
 	y0 <- y;
     if( param$nclass==2 )
-		y <- as.integer( c(-1, 1)[y] );
+		y <- as.integer( c(-1, 1)[y] )
 
     # GTSVM only support the un-biased classification for mulri-class.
     if (param$nclass>2) param$biased<-FALSE;

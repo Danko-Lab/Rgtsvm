@@ -107,7 +107,7 @@ check_var_info <- function(x, y, sparse, type, scale, subset, na.action )
 				#		attr(y, "na.action") <-
 				#			attr(df, "na.action")
 
-				sum.row <- rowSums(x) + y;
+				sum.row <- rowSums(x) + as.numeric(y);
 				sum.row <- na.action(sum.row);
 				nac <- attr( y, "na.action") <- attr( sum.row, "na.action");
 				bigm.naction( x, na.action, nac );
@@ -219,6 +219,8 @@ svm.default <- function (x,
           subset,
           na.action = na.omit)
 {
+cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
+
     if ((is.vector(x) && is.atomic(x)))
         x <- t(t(x))
 

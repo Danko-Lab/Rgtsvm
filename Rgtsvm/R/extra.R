@@ -1,23 +1,31 @@
-load.svmlight = function( filename ) 
+load.svmlight = function( filename, .loadbyC=TRUE )
 {
-	require(Matrix)
-  	content = readLines( filename )
-  	num_lines = length( content )
-  	tomakemat = cbind(1:num_lines, -1, unlist(lapply(1:num_lines, function(i){ strsplit( content[i], ' ' )[[1]][1]} )))
+	require(Matrix);
+	if( !.loadbyC )
+	{
+		content = readLines( filename )
+		num_lines = length( content )
+		tomakemat = cbind(1:num_lines, -1, unlist(lapply(1:num_lines, function(i){ strsplit( content[i], ' ' )[[1]][1]} )))
 
-  	# loop over lines
-  	makemat = rbind(tomakemat,
-		do.call(rbind, 
-			lapply(1:num_lines, function(i){
-				# split by spaces, remove lines
-				line = as.vector( strsplit( content[i], ' ' )[[1]])
-				cbind(i, t(simplify2array(strsplit(line[-1], ':'))))   
-		})))
-	
-	class(makemat) = "numeric"
-	
-	
-	yx = sparseMatrix(i = makemat[,1], j = makemat[,2]+2, x = makemat[,3])
+		# loop over lines
+		makemat = rbind(tomakemat,
+			do.call(rbind,
+				lapply(1:num_lines, function(i){
+					# split by spaces, remove lines
+					line = as.vector( strsplit( content[i], ' ' )[[1]])
+					cbind(i, t(simplify2array(strsplit(line[-1], ':'))))
+			})))
+
+	}
+	else
+	{
+		makemat <-.Call("get_svmlight", as.character(filename) );
+		if(is.null(makemat))
+			return(NULL);
+	}
+
+	class(makemat) = "numeric";
+	yx = sparseMatrix(i = makemat[,1], j = makemat[,2]+2, x = makemat[,3]);
 	return( yx );
 }
 
@@ -29,17 +37,17 @@ load.svmlight = function( filename )
 
 .ls.objects <- function (pos = 1, envir=NULL, pattern, order.by,
                         decreasing=FALSE, head=FALSE, n=5) {
-    
+
     napply <- function(names, fn, missing=NA) sapply(names, function(x){
     	ret <- suppressWarnings( try(fn( if(is.null(envir)) get(x, pos = pos) else get(x, envir=envir) ), TRUE) );
     	if (class(ret)=="try-error") return(missing);
     	ret;
     	});
-    
+
     if(is.null(envir))
     	names <- ls( pos = pos, pattern = pattern)
     else
-		names <- ls( envir = envir )    
+		names <- ls( envir = envir )
 
     obj.class <- napply(names, function(x) as.character(class(x))[1], "NA")
     obj.mode <- napply(names, mode)

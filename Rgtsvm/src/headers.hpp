@@ -67,6 +67,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <ios>
 #include <fstream>
 
 #include <stdexcept>

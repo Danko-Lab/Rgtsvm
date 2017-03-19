@@ -18,6 +18,7 @@ tune.control(random = FALSE,
       boot.size = 9/10, 
       best.model = TRUE,
       performances = TRUE, 
+      rough.cross = 0,
       error.fun = NULL)
 }
 \arguments{
@@ -47,6 +48,7 @@ tune.control(random = FALSE,
     training on the complete training set).}
   \item{performances}{if \code{TRUE}, the performance results for all
     parameter combinations are returned.}
+  \item{rough.cross}{integer.}
   \item{error.fun}{function returning the error measure to be minimized.
     It takes two arguments: a vector of true values and a vector of
     predicted values. If \code{NULL}, the misclassification error is used
