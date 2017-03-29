@@ -162,43 +162,56 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 			center <-c();
 			scale <-c();
 
+			## !!! .C( DUP=FALSE) doesnt work since R 3.1
+			##for(i in 1:length(scaled.cols))
+			##{
+			##  if (scaled.cols[i])
+			##	col.pool <- c(col.pool, i);
+			##
+			##  if( length(col.pool) >= col.n || i==length(scaled.cols))
+			##  {
+			##	   xtmp <- scale( x$data[, x$col.index[col.pool], drop=F] );
+			##
+			##	   ## NOTICE:
+			##	   ## 
+			##	   ## althogh r.dummy include 3 objects, but they are not duplicated.
+			##	   ## Check by th follow methods:
+			##	   ## lsos(envir=environment());
+			##	   ## gc();
+			##	   ## .Internal(inspect( r.dummy[[1]]) )
+			##	   ## 
+			##	   ## address = function(x) substring(capture.output(.Internal(inspect(x)))[1],2,17)
+			##	   ## address(x$data)==address( r.dummy[[1]]) 
+			##	   ## [1] TRUE
+			##
+			##	   #### x$data[,x$col.index[col.pool]] <- xtmp
+			##	   vec.cols <- x$col.index[col.pool];
+			##	   r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
+			##
+			##	   center <- c(center,  unlist( attributes(xtmp)[c("scaled:center" )] ));
+			##	   scale  <- c(scale,   unlist( attributes(xtmp)[c("scaled:scale" )] ));
+			##	   col.pool <- c();
+			##   }
+			##}
+
+
 			for(i in 1:length(scaled.cols))
 			{
-				if (scaled.cols[i])
-					col.pool <- c(col.pool, i);
-
-				if( length(col.pool) >= col.n || i==length(scaled.cols))
-				{
-					xtmp <- scale( x$data[, x$col.index[col.pool], drop=F] );
-
-					## NOTICE:
-					## 
-					## althogh r.dummy include 3 objects, but they are not duplicated.
-					## Check by th follow methods:
-					## lsos(envir=environment());
-					## gc();
-					## .Internal(inspect( r.dummy[[1]]) )
-					## 
-					## address = function(x) substring(capture.output(.Internal(inspect(x)))[1],2,17)
-					## address(x$data)==address( r.dummy[[1]]) 
-					## [1] TRUE
-
-					#### x$data[,x$col.index[col.pool]] <- xtmp
-					vec.cols <- x$col.index[col.pool];
-					r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
-
-					center <- c(center,  unlist( attributes(xtmp)[c("scaled:center" )] ));
-					scale  <- c(scale,   unlist( attributes(xtmp)[c("scaled:scale" )] ));
-					col.pool <- c();
-				}
+			    if (scaled.cols[i])
+			    {
+			       xtmp <- scale( x$data[, x$col.index[i], drop=F] );
+			       x$data[,x$col.index[i]] <- xtmp;
+			       center <- c(center,  unlist( attributes(xtmp)[c("scaled:center" )] ));
+				   scale  <- c(scale,   unlist( attributes(xtmp)[c("scaled:scale" )] ));
+			    }
 			}
 
-			names(scale)<-NULL;
-			names(center)<-NULL;
+			names(scale) <- NULL;
+			names(center) <- NULL;
 			x$scale$scaled.cols <- scaled.cols;
 			x$scale$scaled.center <- center;
 			x$scale$scaled.scale <- scale;
-			
+
 			return( list(`scaled:center`=center, `scaled:scale`=scale) );
 		}
 		else
@@ -209,42 +222,56 @@ setMethod("bigm.scale", "BigMatrix.refer", function(x, scaled.cols, center=NULL,
 			scale.pool <- c();
 			scale.cursor <- 1;
 		
+			## !!! .C( DUP=FALSE) doesnt work since R 3.1
+			##for(i in 1:length(scaled.cols))
+			##{
+			##	if (scaled.cols[i])
+			##	{
+			##		col.pool <- c(col.pool, i);
+			##		scale.pool <- c(scale.pool, scale.cursor );
+			##		scale.cursor <- scale.cursor + 1;
+			##	}
+			##	
+			##	if( length(col.pool) >= col.n || i==length(scaled.cols))
+			##	{
+			##		xtmp <- scale( x$data[, x$col.index[col.pool], drop=F], center = center[scale.pool], scale  = scale[scale.pool] );
+			##
+			##		## NOTICE:
+			##		## 
+			##		## althogh r.dummy include 3 objects, but they are not duplicated.
+			##		## Check by th follow methods:
+			##		## lsos(envir=environment());
+			##		## gc();
+			##		## .Internal(inspect( r.dummy[[1]]) )
+			##		## 
+			##		## address = function(x) substring(capture.output(.Internal(inspect(x)))[1],2,17)
+			##		## address(x$data)==address( r.dummy[[1]]) 
+			##		## [1] TRUE
+			##
+			##		#### x$data[,x$col.index[col.pool]] <- xtmp
+			##		vec.cols <- x$col.index[col.pool];
+			##
+			##		r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
+			##		col.pool <- c();
+			##		scale.pool <- c();
+			##	}
+			##
+	        ##} 
+
 			for(i in 1:length(scaled.cols))
 			{
-				if (scaled.cols[i])
-				{
-					col.pool <- c(col.pool, i);
-					scale.pool <- c(scale.pool, scale.cursor );
-					scale.cursor <- scale.cursor + 1;
-				}
-				
-				if( length(col.pool) >= col.n || i==length(scaled.cols))
-				{
-					xtmp <- scale( x$data[, x$col.index[col.pool], drop=F], center = center[scale.pool], scale  = scale[scale.pool] );
+			    if (scaled.cols[i])
+			    {
+			       xtmp <- scale( x$data[, x$col.index[i], drop=F], center = center[i], scale  = scale[i] );
+			       x$data[,x$col.index[i]] <- xtmp;
+			    }
+			}
 
-					## NOTICE:
-					## 
-					## althogh r.dummy include 3 objects, but they are not duplicated.
-					## Check by th follow methods:
-					## lsos(envir=environment());
-					## gc();
-					## .Internal(inspect( r.dummy[[1]]) )
-					## 
-					## address = function(x) substring(capture.output(.Internal(inspect(x)))[1],2,17)
-					## address(x$data)==address( r.dummy[[1]]) 
-					## [1] TRUE
+			x$scale$scaled.cols <- scaled.cols;
+			x$scale$scaled.center <- center;
+			x$scale$scaled.scale <- scale;
 
-					#### x$data[,x$col.index[col.pool]] <- xtmp
-					vec.cols <- x$col.index[col.pool];
-
-					r.dummy  <- .C("bigmatrix_set_bycols", x$data, as.integer(NROW(x$data)), as.integer(NCOL(x$data)), as.integer(vec.cols), as.integer(NROW(vec.cols)), as.double(xtmp), NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
-					col.pool <- c();
-					scale.pool <- c();
-				}
-
-	        } 
-
-	        invisible(return(x));
+			return( list(`scaled:center`=center, `scaled:scale`=scale) );
 		}
 	});
 
@@ -434,7 +461,8 @@ setGeneric("bigm.reshape",
 		standardGeneric("bigm.reshape");
 	});
 
-
+## ---> reshape function is deprecated 
+## .C( DUP=FLASE ) doesnt work since R 3.1
 reshape_cols<-function( x, cols.target )
 {
 	cols.current <- c(1:length(cols.target));
@@ -556,6 +584,7 @@ cat("ROW:", block.target, "->", block.current, "\n");
 }
 
 
+## This function is deprecated. will be removed in the future!
 setMethod("bigm.reshape", "BigMatrix.refer", function(x)
 	{
 		reshape_cols(x, x$col.index );
@@ -567,7 +596,7 @@ setMethod("bigm.reshape", "BigMatrix.refer", function(x)
 		
 		invisible();
 	});
-
+## <<--- reshape function is deprecated 
 
 attach.bigmatrix <- function( data )
 {

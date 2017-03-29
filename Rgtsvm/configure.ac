@@ -45,7 +45,7 @@ else
 	LDFLAGS="-L${CUDA_HOME}/lib"
 fi
 
-LIBS="-lcuda -lcublas"
+LIBS="-lcuda"
 
 #################### BOOST LIBRARY ####################
 AC_ARG_WITH([boost-home],

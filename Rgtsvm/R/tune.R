@@ -22,7 +22,7 @@ tune.control <- function(random = FALSE,
                          best.model = TRUE,
                          performances = TRUE,
                          rough.cross = 0,
-                         error.fun = NULL) 
+                         error.fun = NULL)
 {
     structure(list(random = random,
                    nrepeat = nrepeat,
@@ -34,32 +34,32 @@ tune.control <- function(random = FALSE,
                    fix = fix,
                    nboot = nboot,
                    boot.size = boot.size,
-                   rough.cross= rough.cross, 
+                   rough.cross= rough.cross,
                    best.model = best.model,
                    performances = performances,
                    error.fun = error.fun),
               class = "tune.control"  )
 }
 
-tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = NULL, validation.y = NULL,  ranges = NULL, predict.func = predict, tunecontrol = tune.control(), ... ) 
+tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = NULL, validation.y = NULL,  ranges = NULL, predict.func = predict, tunecontrol = tune.control(), ... )
 {
     call <- match.call()
 
     ## internal helper functions
-    resp <- function(formula, data) 
+    resp <- function(formula, data)
     {
         model.response(model.frame(formula, data))
     }
 
-    classAgreement <- function (tab) 
+    classAgreement <- function (tab)
     {
         n <- sum(tab)
-        if (!is.null(dimnames(tab))) 
+        if (!is.null(dimnames(tab)))
         {
             lev <- intersect(colnames(tab), rownames(tab))
             p0 <- sum(diag(tab[lev, lev])) / n
         }
-        else 
+        else
         {
             m <- min(dim(tab))
             p0 <- sum(diag(tab[1:m, 1:m])) / n
@@ -76,7 +76,7 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
     if (useFormula && (is.null(data) || length(data) == 0))
         data <- model.frame(train.x)
 
-    if (is.vector(train.x)) 
+    if (is.vector(train.x))
     	train.x <- t(t(train.x))
 
     if (is.data.frame(train.y))
@@ -85,16 +85,16 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
     ## prepare training indices
     if (!is.null(validation.x)) tunecontrol$fix <- 1
     n <- nrow( if (useFormula) data else train.x )
-    
+
     perm.ind <- sample(n)
-    if (tunecontrol$sampling == "cross") 
+    if (tunecontrol$sampling == "cross")
     {
         if (tunecontrol$cross > n)
             stop(sQuote("cross"), " must not exceed sampling size!")
         if (tunecontrol$cross == 1)
             stop(sQuote("cross"), " must be greater than 1!")
     }
-    
+
     train.ind <- if (tunecontrol$sampling == "cross")
         	tapply(1:n, cut(1:n, breaks = tunecontrol$cross), function(x) perm.ind[-x])
     	else if (tunecontrol$sampling == "fix")
@@ -107,38 +107,38 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
         	data.frame(dummyparameter = 0)
     	else
     	    expand.grid(ranges);
-    	    
+
     p <- nrow(parameters);
-    
-    if (!is.logical(tunecontrol$random)) 
+
+    if (!is.logical(tunecontrol$random))
     {
         if (tunecontrol$random < 1)
             stop("random must be a strictly positive integer")
-        if (tunecontrol$random > p) 
+        if (tunecontrol$random > p)
         	tunecontrol$random <- p
-        
+
         parameters <- parameters[sample(1:p, tunecontrol$random),]
     }
-    
+
     model.variances <- model.errors <- c()
 
     ## - loop over all models
-    for (para.set in 1:p) 
+    for (para.set in 1:p)
     {
         sampling.errors <- c()
 
         ## - loop over all training samples
-        
+
         sample.loop <- length(train.ind);
         if(tunecontrol$sampling=="cross" && tunecontrol$rough.cross!=0)
         	sample.loop <- tunecontrol$rough.cross;
-        	
-        for (sample in 1:sample.loop ) 
+
+        for (sample in 1:sample.loop )
         {
             repeat.errors <- c()
 
             ## - repeat training `nrepeat' times
-            for (reps in 1:tunecontrol$nrepeat) 
+            for (reps in 1:tunecontrol$nrepeat)
             {
                 ## train one model
                 pars <- if (is.null(ranges))
@@ -146,11 +146,20 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
                 	else
                 	    lapply(parameters[para.set,,drop = FALSE], unlist)
 
+                tryCatch(
                 model <- if (useFormula)
 	                    do.call(method, c(list(train.x, data = data, subset = train.ind[[sample]]),  pars, list(...) ) )
 	                else
-	                    do.call(method, c(list( train.x[train.ind[[sample]],], y = train.y[train.ind[[sample]]]), pars, list(...) ) );
-					
+	                    do.call(method, c(list( train.x[train.ind[[sample]],], y = train.y[train.ind[[sample]]]), pars, list(...) ) ),
+					error=function(e)
+					{
+						print(e$message);
+						model <- NULL;
+					}
+				);
+
+				if(is.null(model)) next;
+
                 ## predict validation set
                 pred <- predict.func(model,
                                      if (!is.null(validation.x))
@@ -165,17 +174,17 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
                 ## compute performance measure
                 true.y <- if (!is.null(validation.y))
 	                    validation.y
-	                else if (useFormula) 
+	                else if (useFormula)
 	                {
 	                    if (!is.null(validation.x))
 	                        resp(train.x, validation.x)
 	                    else
 	                        resp(train.x, data[-train.ind[[sample]],])
-	                } 
+	                }
 	                else
 	                    train.y[-train.ind[[sample]]]
 
-                if (is.null(true.y)) 
+                if (is.null(true.y))
                 	true.y <- rep(TRUE, length(pred))
 
                 repeat.errors[reps] <- if (!is.null(tunecontrol$error.fun))
@@ -194,18 +203,18 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
 
         model.errors[para.set] <- tunecontrol$sampling.aggregate(sampling.errors)
         model.variances[para.set] <- tunecontrol$sampling.dispersion(sampling.errors)
-		
+
 		cat("[SVM Tuning] error=", model.errors[para.set], "variance=", model.variances[para.set], "\n");
 
     }
 
     ## return results
     best <- which.min(model.errors)
-    pars <- if (is.null(ranges)) 
+    pars <- if (is.null(ranges))
 	        NULL
 	    else
 	        lapply(parameters[best,,drop = FALSE], unlist)
-        
+
     structure(list(best.parameters  = parameters[best,,drop = FALSE],
                    best.performance = model.errors[best],
                    method           = if (!is.character(method)) deparse(substitute(method)) else method,
@@ -213,7 +222,7 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
                    train.ind        = train.ind,
                    sampling         = switch(tunecontrol$sampling, fix = "fixed training/validation set", bootstrap = "bootstrapping", cross = if (tunecontrol$cross == n) "leave-one-out" else paste(tunecontrol$cross,"-fold cross validation", sep="") ),
                    performances     = if (tunecontrol$performances) cbind(parameters, error = model.errors, dispersion = model.variances),
-                   best.model       = if (tunecontrol$best.model) 
+                   best.model       = if (tunecontrol$best.model)
                    					  {
 										   modeltmp <- if (useFormula)
 											   do.call(method, c(list(train.x, data = data),

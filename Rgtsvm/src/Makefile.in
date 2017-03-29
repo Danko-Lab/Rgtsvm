@@ -35,6 +35,7 @@ HEADERS := \
 
 SOURCES := \
 	Rgtsvm.cpp \
+	svmlight.cpp \
 	svm.cpp \
 	cuda_sparse_kernel.cu \
 	cuda_reduce.cu \
@@ -63,7 +64,7 @@ OBJECTS := \
 all: $(TARGET)
 
 $(TARGET) : $(OBJECTS)
-	$(NVCC) -shared $(LDFLAGS) $(LIB) $(OBJECTS) -o $@ 
+	$(NVCC) -shared $(LDFLAGS) $(LIBS) $(OBJECTS) -o $@ 
 
 %.o : %.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
