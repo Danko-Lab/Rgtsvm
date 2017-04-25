@@ -54,7 +54,6 @@ public:
 		if(m_nActLen>=m_nSize)
 		{
 			size_t newsize = round(m_nSize *( 1 + m_fIncRate) );
-Rprintf( "Calloc=%d\n", newsize );
 			float* pNew = Calloc( newsize, float);
 			memcpy(pNew,  m_pBuffer, m_nSize*sizeof(float));
 			Free(m_pBuffer);
@@ -130,7 +129,6 @@ extern "C" SEXP get_svmlight( SEXP filename )
     size_t nEstLen = round(length/10);
 
 //Rprintf( "File length=%d vector size=%d\n", length, nEstLen );
-
 	optimVector values(nEstLen,  0.5);
 	optimVector labels(nEstLen,  0.5);
 	optimVector lines(nEstLen,   0.5);

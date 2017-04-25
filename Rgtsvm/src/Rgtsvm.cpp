@@ -59,76 +59,76 @@
 
 SEXP run_script(char* szCmd)
 {
-    SEXP cmdSexp, cmdExpr, ans = R_NilValue;
-    ParseStatus status;
+	SEXP cmdSexp, cmdExpr, ans = R_NilValue;
+	ParseStatus status;
 
-    PROTECT(cmdSexp = allocVector(STRSXP, 1));
-    SET_STRING_ELT(cmdSexp, 0, mkChar(szCmd) );
-    cmdExpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
+	PROTECT(cmdSexp = allocVector(STRSXP, 1));
+	SET_STRING_ELT(cmdSexp, 0, mkChar(szCmd) );
+	cmdExpr = PROTECT(R_ParseVector(cmdSexp, -1, &status, R_NilValue));
 
-    if (status!=PARSE_OK)
-    {
-        UNPROTECT(2);
-        error("invalid call %s", szCmd);
-    }
+	if (status!=PARSE_OK)
+	{
+		UNPROTECT(2);
+		error("invalid call %s", szCmd);
+	}
 
-    for(int i=0; i<length(cmdExpr); i++)
-        ans = eval(VECTOR_ELT(cmdExpr,i), R_GlobalEnv);
+	for(int i=0; i<length(cmdExpr); i++)
+		ans = eval(VECTOR_ELT(cmdExpr,i), R_GlobalEnv);
 
-    UNPROTECT(2);
-    return(ans);
+	UNPROTECT(2);
+	return(ans);
 }
 
 
 extern "C" void gtsvmtrain_epsregression (
-	       int    *pSparse,
+		   int	*pSparse,
 		   double *pX,
-	       int    *pVecOffset,// start from 0
-	       int 	  *pVecIndex, // start from 1
-		   int    *pXrow,
+		   int	*pVecOffset,// start from 0
+		   int 	  *pVecIndex, // start from 1
+		   int	*pXrow,
 		   int 	  *pXcol,
-		   int    *pXInnerRow,
+		   int	*pXInnerRow,
 		   int 	  *pXInnerCol,
-	       int    *pXRowIndex,
-	       int    *pXColIndex,
-	       double *pY,
+		   int	*pXRowIndex,
+		   int	*pXColIndex,
+		   double *pY,
 
-	       int    *pKernelType,
-	       // KernelParameter3 <==> degree in libsvm
-	       int    *pDegree,
-	       // KernelParameter1 <==> gama in libsvm
-	       double *pGamma,
-	       // KernelParameter2 <==> coef0 in libsvm
-	       double *pCoef0,
-	       // pRegularization <==> cost in libsvm
-	       double *pCost,
-	       double *pTolerance,
-	       double *pEpsilon,
-	       int    *pShrinking,
-	       int    *pFitted,
-	       int    *pMaxIter,
-	       int    *pNoProgressIgnore,
+		   int	*pKernelType,
+		   // KernelParameter3 <==> degree in libsvm
+		   int	*pDegree,
+		   // KernelParameter1 <==> gama in libsvm
+		   double *pGamma,
+		   // KernelParameter2 <==> coef0 in libsvm
+		   double *pCoef0,
+		   // pRegularization <==> cost in libsvm
+		   double *pCost,
+		   double *pTolerance,
+		   double *pEpsilon,
+		   int	*pShrinking,
+		   int	*pFitted,
+		   int	*pMaxIter,
+		   int	*pNoProgressIgnore,
 
 			//output variables
 			//# total iteration
-	       int    *npTotalIter,
+		   int	*npTotalIter,
 			//# the total number of support vectors
-	       int    *pSV,
+		   int	*pSV,
 			//# the index of support vectors
-	       int    *pIndex,
+		   int	*pIndex,
 			//# the labels of classes
-	       int    *pLabels,
+		   int	*pLabels,
 			//# the support vectors of each classes
-	       int    *pSVofclass,
+		   int	*pSVofclass,
 			//# - m_bias
-	       double *pRho,
+		   double *pRho,
 			//# dont alpha value for each classes and support vector dim[nr, nclass-1]
-	       double *pTrainingAlphas,
-	       //# prdict labels for the fitted option
-	       double *pPredict,
+		   double *pTrainingAlphas,
+		   //# prdict labels for the fitted option
+		   double *pPredict,
 
-	       int    *pVerbose,
-	       int    *pnError)
+		   int	*pVerbose,
+		   int	*pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -179,7 +179,7 @@ extern "C" void gtsvmtrain_epsregression (
 		pLinearTerm[ ii + nSample] = - pY[ii] - (*pEpsilon);
 	}
 
-    if (*pSparse > 0)
+	if (*pSparse > 0)
 	{
 		psvm->InitializeSparse(
 			(void*)pX,
@@ -206,8 +206,8 @@ extern "C" void gtsvmtrain_epsregression (
 			smallClusters,
 			activeClusters,
 			true);
-    }
-    else
+	}
+	else
 	{
 		psvm->InitializeDense(
 			(void*)pX,
@@ -332,7 +332,7 @@ extern "C" void gtsvmtrain_epsregression (
 		_TRY_EXCEPTIONS_
 
 		boost::shared_array< double > result( new double[ *pXrow] );
-	    if (*pSparse > 0)
+		if (*pSparse > 0)
 		{
 			psvm->ClassifySparse(
 				(void*)(result.get()),
@@ -356,13 +356,13 @@ extern "C" void gtsvmtrain_epsregression (
 				(unsigned)*pXcol,
 				(unsigned int)*pXInnerRow,
 				(unsigned int)*pXInnerCol,
-			    (unsigned int*)pXRowIndex,
+				(unsigned int*)pXRowIndex,
 				(unsigned int*)pXColIndex,
-				columnMajor);
+				false);
 		}
 
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-		    pPredict[ ii ] = result[ ii ];
+			pPredict[ ii ] = result[ ii ];
 
 		_CATCH_EXCEPTIONS_
 		_CHECK_EXCEPTIONS_
@@ -373,24 +373,24 @@ extern "C" void gtsvmtrain_epsregression (
 }
 
 extern "C" void gtsvmpredict_epsregression_batch  (
-		  int    *pDecisionvalues,
-		  int    *pProbability,
+		  int	*pDecisionvalues,
+		  int	*pProbability,
 
-		  int    *pModelSparse,
+		  int	*pModelSparse,
 		  double *pModelX,
-		  int    *pModelVecOffset,
-		  int    *pModelVecIndex,
-		  int    *pModelRow,
+		  int	*pModelVecOffset,
+		  int	*pModelVecIndex,
+		  int	*pModelRow,
 		  int 	 *pModelCol,
-	      int    *pModelRowIndex,
-	      int    *pModelColIndex,
-		  int    *pTotnSV,
+		  int	*pModelRowIndex,
+		  int	*pModelColIndex,
+		  int	*pTotnSV,
 
 		  double *pModelRho,
 		  double *pModelAlphas,
 
-		  int    *pKernelType,
-		  int    *pDegree,
+		  int	*pKernelType,
+		  int	*pDegree,
 		  double *pGamma,
 		  double *pCoef0,
 		  double *pCost,
@@ -398,13 +398,13 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 		  double *pScaledScale,
 
 		  char   **pszRDSfile,
-		  int    *pLenRDSfile,
+		  int	*pLenRDSfile,
 
 		  double *pRet,
 		  double *pDec,
 		  double *pProb,
-	      int    *pVerbose,
-		  int    *pnError)
+		  int	*pVerbose,
+		  int	*pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -446,7 +446,7 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 		pLinearTerm[ i ] = 1.0;
 	}
 
-    if (*pModelSparse > 0)
+	if (*pModelSparse > 0)
 		psvm->InitializeSparse(
 			(void*)pModelX,
 			(size_t*)pModelVecIndex,
@@ -471,7 +471,7 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 			smallClusters,
 			activeClusters,
 			false);
-    else
+	else
 		psvm->InitializeDense(
 			(void*)pModelX,
 			GTSVM_TYPE_DOUBLE,
@@ -523,25 +523,25 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 		char szCmd[1024]={0};
 		sprintf( szCmd, "readRDS('%s')", pszRDSfile[k] );
 
-		if(*pVerbose) Rprintf("               Loading %s\n", pszRDSfile[k] );
+		if(*pVerbose) Rprintf("			   Loading %s\n", pszRDSfile[k] );
 
 		SEXP pNewData = run_script( szCmd );
 
-	    SEXP dims = getAttrib(pNewData, R_DimSymbol);
-	    int nRow=0, nCol=0;
+		SEXP dims = getAttrib(pNewData, R_DimSymbol);
+		int nRow=0, nCol=0;
 
-	    if (length(dims) == 2)
-	    {
-	        nRow = INTEGER(dims)[0];
-	        nCol = INTEGER(dims)[1];
-	    }
-	    else if(length(dims) == 1)
-	    {
-	        nRow = 1;
-	        nCol = INTEGER(dims)[0];
-	    }
-	    else
-	        return;
+		if (length(dims) == 2)
+		{
+			nRow = INTEGER(dims)[0];
+			nCol = INTEGER(dims)[1];
+		}
+		else if(length(dims) == 1)
+		{
+			nRow = 1;
+			nCol = INTEGER(dims)[0];
+		}
+		else
+			return;
 
 		boost::shared_array< double > result( new double[ nRow] );
 		boost::shared_array< unsigned int > pXRowIndex( new unsigned int[ nRow ] );
@@ -580,43 +580,43 @@ extern "C" void gtsvmpredict_epsregression_batch  (
 
 
 extern "C" void gtsvmpredict_epsregression  (
-		  int    *pDecisionvalues,
-		  int    *pProbability,
+		  int	*pDecisionvalues,
+		  int	*pProbability,
 
-		  int    *pModelSparse,
+		  int	*pModelSparse,
 		  double *pModelX,
-		  int    *pModelVecOffset,
-		  int    *pModelVecIndex,
-		  int    *pModelRow,
+		  int	*pModelVecOffset,
+		  int	*pModelVecIndex,
+		  int	*pModelRow,
 		  int 	 *pModelCol,
-	      int    *pModelRowIndex,
-	      int    *pModelColIndex,
+		  int	*pModelRowIndex,
+		  int	*pModelColIndex,
 
-		  int    *pTotnSV,
+		  int	*pTotnSV,
 		  double *pModelRho,
 		  double *pModelAlphas,
 
-		  int    *pKernelType,
-		  int    *pDegree,
+		  int	*pKernelType,
+		  int	*pDegree,
 		  double *pGamma,
 		  double *pCoef0,
 		  double *pCost,
 
-		  int    *pSparseX,
+		  int	*pSparseX,
 		  double *pX,
-		  int    *pXVecOffset,
-		  int    *pXVecIndex,
+		  int	*pXVecOffset,
+		  int	*pXVecIndex,
 		  int 	 *pXrow,
 		  int 	 *pXInnerRow,
 		  int 	 *pXInnerCol,
-		  int    *pXRowIndex,
-		  int    *pXColIndex,
+		  int	*pXRowIndex,
+		  int	*pXColIndex,
 
 		  double *pRet,
 		  double *pDec,
 		  double *pProb,
-	      int    *pVerbose,
-		  int    *pnError)
+		  int	*pVerbose,
+		  int	*pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -658,7 +658,7 @@ extern "C" void gtsvmpredict_epsregression  (
 		pLinearTerm[ i ] = 1.0;
 	}
 
-    if (*pModelSparse > 0)
+	if (*pModelSparse > 0)
 		psvm->InitializeSparse(
 			(void*)pModelX,
 			(size_t*)pModelVecIndex,
@@ -683,7 +683,7 @@ extern "C" void gtsvmpredict_epsregression  (
 			smallClusters,
 			activeClusters,
 			false);
-    else
+	else
 		psvm->InitializeDense(
 			(void*)pModelX,
 			GTSVM_TYPE_DOUBLE,
@@ -731,7 +731,7 @@ extern "C" void gtsvmpredict_epsregression  (
 
 	_TRY_EXCEPTIONS_
 
-    if (*pSparseX > 0)
+	if (*pSparseX > 0)
 	{
 		psvm->ClassifySparse(
 			(void*)(result.get()),
@@ -773,58 +773,58 @@ extern "C" void gtsvmpredict_epsregression  (
 }
 
 extern "C" void gtsvmtrain_classfication (
-	       int    *pSparse,
-	       double *pX,
-	       int    *pVecOffset,// start from 0
-	       int 	  *pVecIndex, // start from 1
-		   int    *pXrow,
+		   int	*pSparse,
+		   double *pX,
+		   int	*pVecOffset,// start from 0
+		   int 	  *pVecIndex, // start from 1
+		   int	*pXrow,
 		   int 	  *pXcol,
-	       int    *pXInnerRow,
-	       int    *pXInnerCol,
-	       int    *pXRowIndex,
-	       int    *pXColIndex,
-	       double *pY,
+		   int	*pXInnerRow,
+		   int	*pXInnerCol,
+		   int	*pXRowIndex,
+		   int	*pXColIndex,
+		   double *pY,
 
-	       int    *pKernelType,
+		   int	*pKernelType,
 		   // the number of classes
-	       int    *pRclasses,
-	       // KernelParameter3 <==> degree in libsvm
-	       int    *pDegree,
-	       // KernelParameter1 <==> gama in libsvm
-	       double *pGamma,
-	       // KernelParameter2 <==> coef0 in libsvm
-	       double *pCoef0,
-	       // pRegularization <==> cost in libsvm
-	       double *pCost,
-	       double *pClassWeight,
+		   int	*pRclasses,
+		   // KernelParameter3 <==> degree in libsvm
+		   int	*pDegree,
+		   // KernelParameter1 <==> gama in libsvm
+		   double *pGamma,
+		   // KernelParameter2 <==> coef0 in libsvm
+		   double *pCoef0,
+		   // pRegularization <==> cost in libsvm
+		   double *pCost,
+		   double *pClassWeight,
 		   double *pTolerance,
-	       int    *pFitted,
-	       int    *pBiased,
-	       int    *pMaxIter,
-	       int    *pNoProgressIgnore,
+		   int	*pFitted,
+		   int	*pBiased,
+		   int	*pMaxIter,
+		   int	*pNoProgressIgnore,
 
 			//output variables
 			//# total iteration
-	       int    *npTotal_iter,
+		   int	*npTotal_iter,
 			//# the total number of classes
-	       int    *pClasses,
+		   int	*pClasses,
 			//# the total number of support vectors
-	       int    *pSV,
+		   int	*pSV,
 			//# the index of support vectors
-	       int    *pIndex,
+		   int	*pIndex,
 			//# the labels of classes
-	       int    *pLabels,
+		   int	*pLabels,
 			//# the support vectors of each classes
-	       int    *pSVofclass,
+		   int	*pSVofclass,
 			//# dont know
-	       double *pRho,
+		   double *pRho,
 			//# dont alpha value for each classes and support vector dim[nr, nclass-1]
-	       double *pTrainingAlphas,
-	       double * pPredict,
-	       double * pDecision,
+		   double *pTrainingAlphas,
+		   double * pPredict,
+		   double * pDecision,
 
-	       int    *pVerbose,
-	       int    *pnError)
+		   int	*pVerbose,
+		   int	*pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -883,7 +883,7 @@ extern "C" void gtsvmtrain_classfication (
 		}
 	}
 
-    if (*pSparse > 0)
+	if (*pSparse > 0)
 	{
 		psvm->InitializeSparse(
 			(void*)pX,
@@ -910,8 +910,8 @@ extern "C" void gtsvmtrain_classfication (
 			smallClusters,
 			activeClusters,
 			true);
-    }
-    else
+	}
+	else
 	{
 		psvm->InitializeDense(
 			(void*)pX,
@@ -920,7 +920,7 @@ extern "C" void gtsvmtrain_classfication (
 			(unsigned int)*pXcol,
 			(unsigned int)*pXInnerRow,
 			(unsigned int)*pXInnerCol,
-		    (unsigned int*)pXRowIndex,
+			(unsigned int*)pXRowIndex,
 			(unsigned int*)pXColIndex,
 			(void*)pY,
 			GTSVM_TYPE_DOUBLE,
@@ -988,7 +988,7 @@ extern "C" void gtsvmtrain_classfication (
 	//*** for binary classfication, only one Alpha value for each sample.
 	unsigned int nCol = psvm->GetClasses();
 	boost::shared_array< float > trainingAlphas( new float[ (*pXrow) * nCol ] );
-	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_FLOAT, columnMajor );
+	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_FLOAT, true );
 
 	*pSV = 0;
 	int nLableFill = 0;
@@ -1036,7 +1036,7 @@ extern "C" void gtsvmtrain_classfication (
 	_TRY_EXCEPTIONS_
 
 	psvm->ShrinkClassfication(smallClusters, activeClusters);
-	psvm->GetAlphas( (void*)pTrainingAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
+	psvm->GetAlphas( (void*)pTrainingAlphas, GTSVM_TYPE_DOUBLE, false );
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
@@ -1047,7 +1047,9 @@ extern "C" void gtsvmtrain_classfication (
 		_TRY_EXCEPTIONS_
 
 		boost::shared_array< double > result( new double[ (*pXrow) * nCol ] );
-	    if (*pSparse > 0)
+		bool resultColumnMajor = false;
+
+		if (*pSparse > 0)
 		{
 			psvm->ClassifySparse(
 				(void*)(result.get()),
@@ -1058,30 +1060,7 @@ extern "C" void gtsvmtrain_classfication (
 				GTSVM_TYPE_DOUBLE,
 				(unsigned)*pXrow,
 				(unsigned)*pXcol,
-				false	);
-
-
-			if(!multiclass)
-			{
-				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-					if( result[ ii ] < 0)
-						pPredict[ ii ]= -1;
-					else
-						pPredict[ ii ] = 1;
-			}
-			else
-			{
-				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-				{
-					unsigned int n_idx = 0;
-					for ( unsigned int jj = 1; jj < nCol; ++jj )
-					{
-						if(	result[ ii*nCol + jj ] > result[ ii*nCol + n_idx ] )
-							n_idx = jj;
-					}
-					pPredict[ii] = (n_idx+1)*1.0;
-				}
-			}
+				false);
 		}
 		else
 		{
@@ -1094,32 +1073,49 @@ extern "C" void gtsvmtrain_classfication (
 				(unsigned)*pXcol,
 				(unsigned int)*pXInnerRow,
 				(unsigned int)*pXInnerCol,
-			    (unsigned int*)pXRowIndex,
+				(unsigned int*)pXRowIndex,
 				(unsigned int*)pXColIndex,
 				columnMajor);
 
-			if(!multiclass)
+			resultColumnMajor = columnMajor;
+		}
+
+		if(!multiclass)
+		{
+			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+				if( result[ ii ] < 0)
+					pPredict[ ii ]= -1;
+				else
+					pPredict[ ii ] = 1;
+		}
+		else
+		{
+
+			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
 			{
-				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
-					if( result[ ii ] < 0)
-						pPredict[ ii ]= -1;
-					else
-						pPredict[ ii ] = 1;
-			}
-			else
-			{
-				for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+				unsigned int n_idx = 0;
+
+				if(resultColumnMajor)
 				{
-					unsigned int n_idx = 0;
 					for ( unsigned int jj = 1; jj < nCol; ++jj )
 					{
 						if(	result[ ii + jj*(*pXrow) ] > result[ ii + n_idx*(*pXrow) ] )
 							n_idx = jj;
 					}
-					pPredict[ii] = (n_idx+1)*1.0;
 				}
+				else
+				{
+					for ( unsigned int jj = 1; jj < nCol; ++jj )
+					{
+						if(	result[ ii*nCol + jj ] > result[ ii*nCol + n_idx ] )
+							n_idx = jj;
+					}
+				}
+
+				pPredict[ii] = (n_idx+1)*1.0;
 			}
 		}
+
 		_CATCH_EXCEPTIONS_
 		_CHECK_EXCEPTIONS_
 	}
@@ -1129,43 +1125,43 @@ extern "C" void gtsvmtrain_classfication (
 }
 
 extern "C" void gtsvmpredict_classfication  (
-		  int    *pDecisionvalues,
-		  int    *pProbability,
-		  int    *pModelSparse,
+		  int	*pDecisionvalues,
+		  int	*pProbability,
+		  int	*pModelSparse,
 		  double *pModelX,
-		  int    *pModelVecOffset,
-		  int    *pModelVecIndex,
-		  int    *pModelRow,
+		  int	*pModelVecOffset,
+		  int	*pModelVecIndex,
+		  int	*pModelRow,
 		  int 	 *pModelCol,
-		  int    *pModelRowIndex,
-		  int 	 *pModelColIndex,
+		  int	*pModelRowIndex,
+		  int 	*pModelColIndex,
 
-		  int    *pNclasses,
-		  int    *pTotnSV,
+		  int	*pNclasses,
+		  int	*pTotnSV,
 		  double *pModelRho,
 		  double *pModelAlphas,
 
-		  int    *pKernelType,
-		  int    *pDegree,
+		  int	*pKernelType,
+		  int	*pDegree,
 		  double *pGamma,
 		  double *pCoef0,
 		  double *pCost,
 
-		  int    *pSparseX,
+		  int	*pSparseX,
 		  double *pX,
-		  int    *pXVecOffset,
-		  int    *pXVecIndex,
+		  int	*pXVecOffset,
+		  int	*pXVecIndex,
 		  int 	 *pXrow,
-		  int    *pXInnerRow,
-		  int    *pXInnerCol,
-		  int    *pXRowIndex,
-		  int    *pXColIndex,
+		  int	*pXInnerRow,
+		  int	*pXInnerCol,
+		  int	*pXRowIndex,
+		  int	*pXColIndex,
 
 		  double *pRet,
 		  double *pDec,
 		  double *pProb,
-	      int    *pVerbose,
-		  int    *pnError)
+		  int	*pVerbose,
+		  int	*pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -1205,7 +1201,7 @@ extern "C" void gtsvmpredict_classfication  (
 	boost::shared_array< float > regularizationWeights( new float[ *pNclasses + 1 ] );
 	std::fill( regularizationWeights.get(), regularizationWeights.get() + *pNclasses + 1, 1.0f );
 
-    if (*pModelSparse > 0)
+	if (*pModelSparse > 0)
 		psvm->InitializeSparse(
 			(void*)pModelX,
 			(size_t*)pModelVecIndex,
@@ -1221,7 +1217,7 @@ extern "C" void gtsvmpredict_classfication  (
 			multiclass,
 			regularization,
 			regularizationWeights.get(),
-			*pNclasses,
+			nclasses,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			kernelParameter1,
 			kernelParameter2,
@@ -1230,7 +1226,7 @@ extern "C" void gtsvmpredict_classfication  (
 			smallClusters,
 			activeClusters,
 			false);
-    else
+	else
 		psvm->InitializeDense(
 			(void*)pModelX,
 			GTSVM_TYPE_DOUBLE,
@@ -1248,7 +1244,7 @@ extern "C" void gtsvmpredict_classfication  (
 			multiclass,
 			regularization,
 			regularizationWeights.get(),
-			*pNclasses,
+			nclasses,
 			static_cast< GTSVM_Kernel >(*pKernelType),
 			(float)kernelParameter1,
 			(float)kernelParameter2,
@@ -1263,9 +1259,9 @@ extern "C" void gtsvmpredict_classfication  (
 
 	_TRY_EXCEPTIONS_
 
-	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
+	//psvm->ClusterTrainingVectors( smallClusters, activeClusters );
 	psvm->SetBias(  -1*(*pModelRho) );
-	psvm->ClusterTrainingVectors( smallClusters, activeClusters );
+	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, false );
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
@@ -1278,7 +1274,7 @@ extern "C" void gtsvmpredict_classfication  (
 
 	_TRY_EXCEPTIONS_
 
-    if (*pSparseX > 0)
+	if (*pSparseX > 0)
 	{
 		psvm->ClassifySparse(
 			(void*)(result.get()),
@@ -1289,7 +1285,7 @@ extern "C" void gtsvmpredict_classfication  (
 			GTSVM_TYPE_DOUBLE,
 			(unsigned)*pXrow,
 			(unsigned)*pModelCol,
-			false	);
+			false );
 
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
 			for ( unsigned int jj = 0; jj < ncol; ++jj )
@@ -1306,18 +1302,17 @@ extern "C" void gtsvmpredict_classfication  (
 			(unsigned)*pModelCol,
 			(unsigned int)*pXInnerRow,
 			(unsigned int)*pXInnerCol,
-		    (unsigned int*)pXRowIndex,
+			(unsigned int*)pXRowIndex,
 			(unsigned int*)pXColIndex,
-			columnMajor);
+			columnMajor );
 
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
 			for ( unsigned int jj = 0; jj < ncol; ++jj )
-				pDec[ ii + jj*(*pXrow) ] = result[ ii + jj*(*pXrow) ];
+				pDec[ ii + jj*(*pXrow) ] = result[ii + jj*(*pXrow) ];
 	}
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
-
 
 	if(!multiclass)
 	{
@@ -1337,7 +1332,7 @@ extern "C" void gtsvmpredict_classfication  (
 				if(	pDec[ ii + jj*(*pXrow) ] > pDec[ ii + n_idx*(*pXrow) ] )
 					n_idx = jj;
 			}
-			pRet[ ii ]= n_idx;
+			pRet[ ii ]= (n_idx+1)*1.0;
 		}
 	}
 
@@ -1346,25 +1341,25 @@ extern "C" void gtsvmpredict_classfication  (
 
 
 extern "C" void gtsvmpredict_classfication_batch  (
-		  int    *pDecisionvalues,
-		  int    *pProbability,
+		  int	*pDecisionvalues,
+		  int	*pProbability,
 
-		  int    *pModelSparse,
+		  int	*pModelSparse,
 		  double *pModelX,
-		  int    *pModelVecOffset,
-		  int    *pModelVecIndex,
-		  int    *pModelRow,
+		  int	*pModelVecOffset,
+		  int	*pModelVecIndex,
+		  int	*pModelRow,
 		  int 	 *pModelCol,
-	      int    *pModelRowIndex,
-	      int    *pModelColIndex,
-		  int    *pTotnSV,
+		  int	*pModelRowIndex,
+		  int	*pModelColIndex,
+		  int	*pTotnSV,
 
 		  double *pModelRho,
 		  double *pModelAlphas,
-		  int    *pNclasses,
+		  int	*pNclasses,
 
-		  int    *pKernelType,
-		  int    *pDegree,
+		  int	*pKernelType,
+		  int	*pDegree,
 		  double *pGamma,
 		  double *pCoef0,
 		  double *pCost,
@@ -1372,13 +1367,13 @@ extern "C" void gtsvmpredict_classfication_batch  (
 		  double *pScaledScale,
 
 		  char   **pszRDSfile,
-		  int    *pLenRDSfile,
+		  int	*pLenRDSfile,
 
 		  double *pRet,
 		  double *pDec,
 		  double *pProb,
-	      int    *pVerbose,
-		  int    *pnError)
+		  int	*pVerbose,
+		  int	*pnError)
 {
 	GTSVM::SVM svm;
 	GTSVM::SVM* psvm = &svm;
@@ -1419,7 +1414,7 @@ extern "C" void gtsvmpredict_classfication_batch  (
 	boost::shared_array< float > regularizationWeights( new float[ *pNclasses + 1 ] );
 	std::fill( regularizationWeights.get(), regularizationWeights.get() + *pNclasses + 1, 1.0f );
 
-    if (*pModelSparse > 0)
+	if (*pModelSparse > 0)
 		psvm->InitializeSparse(
 			(void*)pModelX,
 			(size_t*)pModelVecIndex,
@@ -1444,7 +1439,7 @@ extern "C" void gtsvmpredict_classfication_batch  (
 			smallClusters,
 			activeClusters,
 			false);
-    else
+	else
 		psvm->InitializeDense(
 			(void*)pModelX,
 			GTSVM_TYPE_DOUBLE,
@@ -1489,7 +1484,7 @@ extern "C" void gtsvmpredict_classfication_batch  (
 	unsigned int nclass = psvm->GetClasses();
 
 	char szCmd[1024]={0};
-    unsigned int nRow=0, nCol=0,nOffsetret = 0;
+	unsigned int nRow=0, nCol=0,nOffsetret = 0;
 
 	for (int k=0; k< *pLenRDSfile; k++)
 	{
@@ -1497,22 +1492,22 @@ extern "C" void gtsvmpredict_classfication_batch  (
 
 		// load RDS file and get row count and column count.
 		sprintf( szCmd, "readRDS('%s')", pszRDSfile[k] );
-		if(*pVerbose) Rprintf("               Loading %s\n", pszRDSfile[k] );
+		if(*pVerbose) Rprintf("	       Loading %s\n", pszRDSfile[k] );
 
 		SEXP pNewData = run_script( szCmd );
-	    SEXP dims = getAttrib(pNewData, R_DimSymbol);
-	    if (length(dims) == 2)
-	    {
-	        nRow = INTEGER(dims)[0];
-	        nCol = INTEGER(dims)[1];
-	    }
-	    else if(length(dims) == 1)
-	    {
-	        nRow = 1;
-	        nCol = INTEGER(dims)[0];
-	    }
-	    else
-	        return;
+		SEXP dims = getAttrib(pNewData, R_DimSymbol);
+		if (length(dims) == 2)
+		{
+			nRow = INTEGER(dims)[0];
+			nCol = INTEGER(dims)[1];
+		}
+		else if(length(dims) == 1)
+		{
+			nRow = 1;
+			nCol = INTEGER(dims)[0];
+		}
+		else
+			return;
 
 		boost::shared_array< double > result( new double[ nRow * nclass] );
 		boost::shared_array< unsigned int > pXRowIndex( new unsigned int[ nRow ] );
@@ -1529,40 +1524,49 @@ extern "C" void gtsvmpredict_classfication_batch  (
 			(unsigned)*pModelCol,
 			(unsigned int)nRow,
 			(unsigned int)nCol,
-		    (unsigned int*)pXRowIndex.get(),
+			(unsigned int*)pXRowIndex.get(),
 			(unsigned int*)pXColIndex.get(),
-			columnMajor);
+			false);
 
 		for ( unsigned int ii = 0; ii < nRow; ++ii )
 			for ( unsigned int jj = 0; jj < nclass; ++jj )
-				pDec[ ii + jj*(nRow) + nOffsetret*nclass ] = result[ ii + jj*(nRow) ];
+				pDec[ (ii + nOffsetret)*nclass + jj  ] = result[ ii*nclass + jj ];
 
 		_CATCH_EXCEPTIONS_
 		_CHECK_EXCEPTIONS_
 
-		if(!multiclass)
+		nOffsetret = nOffsetret + nRow;
+	}
+
+	if(!multiclass)
+	{
+		for ( unsigned int ii = 0; ii < nOffsetret; ++ii )
+			if( pDec[ ii ] < 0)
+				pRet[ ii ]= -1;
+			else
+				pRet[ ii ] = 1;
+	}
+	else
+	{
+		for (unsigned int ii = 0; ii < nOffsetret; ++ii )
 		{
-			for ( unsigned int ii = nOffsetret; ii < nRow+nOffsetret; ++ii )
-				if( pDec[ ii ] < 0)
-					pRet[ ii ]= -1;
-				else
-					pRet[ ii ] = 1;
-		}
-		else
-		{
-			for (unsigned int ii = nOffsetret; ii < nRow+nOffsetret; ++ii )
+			unsigned int n_idx = 0;
+			for ( unsigned int jj = 1; jj < nclass; ++jj )
 			{
-				unsigned int n_idx = 0;
-				for ( unsigned int jj = 1; jj < nclass; ++jj )
-				{
-					if(	pDec[ ii + jj*nRow ] > pDec[ ii + n_idx*nRow ] )
-						n_idx = jj;
-				}
-				pRet[ ii ]= n_idx;
+				if(	pDec[ ii*nclass + jj ] > pDec[ ii*nclass + n_idx ] )
+					n_idx = jj;
 			}
+			pRet[ ii ]= (n_idx+1)*1.0;
 		}
 
-		nOffsetret = nOffsetret + nRow;
+		boost::shared_array< double > pDec2( new double[ nOffsetret * nclass] );
+		for(unsigned int ii = 0; ii < nOffsetret * nclass; ++ii )
+			pDec2[ii] = pDec[ii];
+
+		for(unsigned int ii = 0; ii < nOffsetret; ++ii )
+			for ( unsigned int jj = 0; jj < nclass; ++jj )
+				pDec[ ii + jj*nOffsetret ] = pDec2[ ii*nclass + jj ];
+
 	}
 
 	if(*pVerbose) Rprintf("[C-SVC batch#] DONE!\n");
