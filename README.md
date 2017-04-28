@@ -74,7 +74,7 @@ git clone https://github.com/Danko-Lab/Rgtsvm.git
 
 cd Rgtsvm
 
-R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtvm
+R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtsvm
 
 ```
 
