@@ -105,5 +105,5 @@ best.tune(...)
   ## simple error estimation for lm using 10-fold cross validation
   tune(lm, mpg~., data = mtcars)
 }
-\keyword{models}
+\keyword{tuning}
 

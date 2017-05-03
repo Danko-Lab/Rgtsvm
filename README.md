@@ -70,6 +70,9 @@ Rgtsvm is only available for the Linux and Mac OSX. The source code can be downl
 Please install the required R package before you install Rgtsvm package. After the  installation of `dREG`, `snowfall` and `data.table` package, please install the **Rgtsvm** as following steps.
 
 ```
+
+# Set $CUDA_PATH and $BOOST_PATH before installation
+
 git clone https://github.com/Danko-Lab/Rgtsvm.git
 
 cd Rgtsvm

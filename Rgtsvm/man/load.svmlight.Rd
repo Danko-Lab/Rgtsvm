@@ -25,4 +25,4 @@ A sparse matrix is returned if the file is loaded or downloaded successfully.
 mat <-load.svmlight("http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass/glass.scale")
 str(mat);
 }
-\keyword{ functions }
+\keyword{ data loading }

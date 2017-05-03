@@ -64,4 +64,4 @@ tune.control(random = FALSE,
   \email{David.Meyer@R-project.org}
 }
 \seealso{\code{\link{tune}}}
-\keyword{models}
+\keyword{tuning}

@@ -175,4 +175,4 @@ plot(cmdscale(dist(iris[,-5])),
      pch = c("o","+")[1:150 %in% model$index + 1])
      
 }
-\keyword{classification}
+\keyword{svm}
