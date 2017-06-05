@@ -59,9 +59,9 @@ Rgtsvm is only available for the Linux and Mac OSX. The source code can be downl
     
 1. R (http://www.r-project.org/)
     
-2. CUDA library (https://github.com/Danko-Lab/dREG).
+2. CUDA library (https://developer.nvidia.com/cuda-toolkit-archive).
     
-3. Boost library (https://github.com/arq5x/bedtools2/)
+3. Boost library (http://www.boost.org/users/download/)
     
 4. Extra R Package: bit64
     
@@ -107,6 +107,8 @@ library(Rgtsvm);
 model <- svm(Species ~ ., data = iris);
 ```
 
+## Installation Example
+
 ###Installation instructions on *stampede.tacc.xsede.org*
 -----------
 
@@ -127,4 +129,15 @@ module load r
 module load cuda/6.5
 R CMD INSTALL --configure-args="--with-cuda-home=/usr/local/packages/cuda/6.5 --with-boost-home=/usr/local/packages/boost/1.55.0/INTEL-14.0.2-python-2.7.7-anaconda" Rgtsvm
 ```
+
+##License
+
+Copyright(c) 2017 Zhong Wang
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 
