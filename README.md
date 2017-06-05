@@ -45,6 +45,32 @@ The package has the following features:
 
 > 6) Altering cost values for minor class or major class.
 
+## Usage instructions
+
+Rgtsvm implement the following functions on GPU package(GTSVM)
+
+> `svm`: a function to train a support vector machine by the C-classfication method and epsilon regression on GPU
+
+> `predict`: a function to predict values based upon a model trained by `svm` in package Rgtsvm
+
+> `tune`: a function to tune hyperparameters of statistical methods using a grid search over supplied parameter ranges
+
+> `plot.tune`: visualizes the results of parameter tuning
+
+> `load.svmlight`: a function to load SVMlight data file into a sparse matrix
+
+Please check the details in the manual (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-manual.pdf).
+
+To use Rgtsvm, type: 
+
+```
+library(Rgtsvm);
+
+?svm
+
+model <- svm(Species ~ ., data = iris);
+```
+
 ## Performance
 
 ![Image of comparison with e1071 and Rgtsvm ](https://github.com/Danko-Lab/Rgtsvm/blob/master/img/Rgtsvm_table.png)
@@ -101,31 +127,6 @@ module load cuda/6.5
 R CMD INSTALL --configure-args="--with-cuda-home=/usr/local/packages/cuda/6.5 --with-boost-home=/usr/local/packages/boost/1.55.0/INTEL-14.0.2-python-2.7.7-anaconda" Rgtsvm
 ```
 
-## Usage instructions
-
-Rgtsvm implement the following functions on GPU package(GTSVM)
-
-> `svm`: a function to train a support vector machine by the C-classfication method and epsilon regression on GPU
-
-> `predict`: a function to predict values based upon a model trained by `svm` in package Rgtsvm
-
-> `tune`: a function to tune hyperparameters of statistical methods using a grid search over supplied parameter ranges
-
-> `plot.tune`: visualizes the results of parameter tuning
-
-> `load.svmlight`: a function to load SVMlight data file into a sparse matrix
-
-Please check the details in the manual (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-manual.pdf).
-
-To use Rgtsvm, type: 
-
-```
-library(Rgtsvm);
-
-?svm
-
-model <- svm(Species ~ ., data = iris);
-```
 ## License
 
 Copyright(c) 2017 Zhong Wang
