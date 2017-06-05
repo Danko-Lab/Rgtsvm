@@ -84,7 +84,6 @@ R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$B
 ### Installation Example
 
 #### Installation instructions on *stampede.tacc.xsede.org*
------------
 
 ```
 module load gcc/4.7.1
@@ -95,7 +94,6 @@ R CMD INSTALL --configure-args="--with-cuda-home=/opt/apps/cuda/6.5 --with-boost
 ```
 
 #### Installation instructions on *supermic.cct-lsu.xsede.org*
------------
 
 ```
 module load r
@@ -132,7 +130,7 @@ model <- svm(Species ~ ., data = iris);
 
 Copyright(c) 2017 Zhong Wang
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
