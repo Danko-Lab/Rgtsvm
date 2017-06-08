@@ -45,40 +45,7 @@ The package has the following features:
 
 > 6) Altering cost values for minor class or major class.
 
-## Performance
-
-![Image of comparison with e1071 and Rgtsvm ](https://github.com/Danko-Lab/Rgtsvm/blob/master/img/Rgtsvm_table.png)
-
-![Image of comparison with e1071 and Rgtsvm ](https://github.com/Danko-Lab/Rgtsvm/blob/master/img/Rgtsvm_perf.png)
-
-## Installation Instructions:
-
-Rgtsvm is only available for the Linux and Mac OSX. The source code can be downloaded from this repository (https://github.com/Danko-Lab/Rgtsvm.git). 
-
-### Required software and packages
-    
-1. R (http://www.r-project.org/)
-    
-2. CUDA library (https://github.com/Danko-Lab/dREG).
-    
-3. Boost library (https://github.com/arq5x/bedtools2/)
-    
-4. Extra R Package: bit64
-    
-### Install Rgtsvm
-
-Please install the required R package before you install Rgtsvm package. After the  installation of `dREG`, `snowfall` and `data.table` package, please install the **Rgtsvm** as following steps.
-
-```
-git clone https://github.com/Danko-Lab/Rgtsvm.git
-
-cd Rgtsvm
-
-R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtvm
-
-```
-
-##Usage instructions
+## Usage instructions
 
 Rgtsvm implement the following functions on GPU package(GTSVM)
 
@@ -104,8 +71,45 @@ library(Rgtsvm);
 model <- svm(Species ~ ., data = iris);
 ```
 
-###Installation instructions on *stampede.tacc.xsede.org*
------------
+## Performance
+
+![Image of comparison with e1071 and Rgtsvm ](https://github.com/Danko-Lab/Rgtsvm/blob/master/img/Rgtsvm_table.png)
+
+![Image of comparison with e1071 and Rgtsvm ](https://github.com/Danko-Lab/Rgtsvm/blob/master/img/Rgtsvm_perf.png)
+
+## Installation Instructions:
+
+Rgtsvm is only available for the Linux and Mac OSX. The source code can be downloaded from this repository (https://github.com/Danko-Lab/Rgtsvm.git). 
+
+### Required software and packages
+    
+1. R (http://www.r-project.org/)
+    
+2. CUDA library (https://developer.nvidia.com/cuda-toolkit-archive).
+    
+3. Boost library (http://www.boost.org/users/download/)
+    
+4. Extra R Package: bit64
+    
+### Install Rgtsvm
+
+Please install the required R package before you install Rgtsvm package. After the  installation of `dREG`, `snowfall` and `data.table` package, please install the **Rgtsvm** as following steps.
+
+```
+
+# Set $CUDA_PATH and $BOOST_PATH before installation
+
+git clone https://github.com/Danko-Lab/Rgtsvm.git
+
+cd Rgtsvm
+
+R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtsvm
+
+```
+
+### Installation Example
+
+#### Installation instructions on *stampede.tacc.xsede.org*
 
 ```
 module load gcc/4.7.1
@@ -115,13 +119,22 @@ module load boost/1.55.0
 R CMD INSTALL --configure-args="--with-cuda-home=/opt/apps/cuda/6.5 --with-boost-home=/opt/apps/gcc4_7/boost/1.55.0" Rgtsvm
 ```
 
-
-###Installation instructions on *supermic.cct-lsu.xsede.org*
------------
+#### Installation instructions on *supermic.cct-lsu.xsede.org*
 
 ```
 module load r
 module load cuda/6.5
 R CMD INSTALL --configure-args="--with-cuda-home=/usr/local/packages/cuda/6.5 --with-boost-home=/usr/local/packages/boost/1.55.0/INTEL-14.0.2-python-2.7.7-anaconda" Rgtsvm
 ```
+
+## License
+
+Copyright(c) 2017 Zhong Wang
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 

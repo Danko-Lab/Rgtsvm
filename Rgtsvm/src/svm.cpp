@@ -830,7 +830,8 @@ void SVM::InitializeSparse(
 			if ( maximumLabel > 65535 )
 				throw std::runtime_error( "multiclass labels cannot exceed 65535" );
 
-			m_classes = maximumLabel + 1;
+			//m_classes = maximumLabel + 1;
+			m_classes = classNumber;
 
 			boost::shared_array< bool > present( new bool[ m_classes ] );
 			std::fill( present.get(), present.get() + m_classes, false );
@@ -952,7 +953,8 @@ void SVM::InitializeDense(
 			if ( maximumLabel > 65535 )
 				throw std::runtime_error( "multiclass labels cannot exceed 65535" );
 
-			m_classes = maximumLabel + 1;
+			//m_classes = maximumLabel + 1;
+			m_classes = classNumber;
 
 			boost::shared_array< bool > present( new bool[ m_classes ] );
 			std::fill( present.get(), present.get() + m_classes, false );
@@ -2323,9 +2325,6 @@ void SVM::ClassifyDense(
 				classifications[ ( ii + jj ) * m_classes + kk ] = m_batchResponses[ kk * 16 + jj ];
 	}
 
-
-// ("m_bias=%f\n", m_bias);
-
 	if ( m_biased ) {
 
 		CUDA_FLOAT_DOUBLE* ii    = classifications.get();
@@ -2511,7 +2510,6 @@ void SVM::ClusterTrainingVectors(
 
 
 void SVM::InitializeDevice() {
-
 	if ( m_initializedDevice )
 		throw std::runtime_error( "SVM has already been initialized" );
 	m_initializedDevice = true;

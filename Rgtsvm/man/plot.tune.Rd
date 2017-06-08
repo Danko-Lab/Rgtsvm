@@ -47,4 +47,5 @@
   plot(obj, transform.x = log2, transform.y = log2)
   plot(obj, type = "perspective", theta = 120, phi = 45)
 }
-\keyword{models}% __ONLY ONE__ keyword per line
+\keyword{plot}
+\keyword{tuning}

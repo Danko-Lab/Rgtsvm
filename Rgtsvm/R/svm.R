@@ -14,7 +14,7 @@ EPSILON_SVR <- 3;
 
 is.bigmatrix.refer<-function(x)
 {
-	return( inherits(x, "BigMatrix.refer") );
+    return( inherits(x, "BigMatrix.refer") );
 }
 
 
@@ -91,54 +91,54 @@ check_var_info <- function(x, y, sparse, type, scale, subset, na.action )
         {
             if (!missing(subset))
             {
-       			bigm.subset(x, subset);
-       			y <- y[subset];
-        	}
+                bigm.subset(x, subset);
+                y <- y[subset];
+            }
 
-			if (is.null(y))
-				nac <- bigm.naction(x, na.action)
-			else
-			{
-				#df <- na.action(data.frame(y, x))
-				#y <- df[,1]
-				#x <- as.matrix(df[,-1])
-				#nac <-
-				#	attr(x, "na.action") <-
-				#		attr(y, "na.action") <-
-				#			attr(df, "na.action")
+            if (is.null(y))
+                nac <- bigm.naction(x, na.action)
+            else
+            {
+                #df <- na.action(data.frame(y, x))
+                #y <- df[,1]
+                #x <- as.matrix(df[,-1])
+                #nac <-
+                #    attr(x, "na.action") <-
+                #        attr(y, "na.action") <-
+                #            attr(df, "na.action")
 
-				sum.row <- rowSums(x) + as.numeric(y);
-				sum.row <- na.action(sum.row);
-				nac <- attr( y, "na.action") <- attr( sum.row, "na.action");
-				bigm.naction( x, na.action, nac );
-			}
-		}
+                sum.row <- rowSums(x) + as.numeric(y);
+                sum.row <- na.action(sum.row);
+                nac <- attr( y, "na.action") <- attr( sum.row, "na.action");
+                bigm.naction( x, na.action, nac );
+            }
+        }
 
-		## scaling
-		if (length(scale) == 1)
-			scale <- rep(scale, ncol(x))
+        ## scaling
+        if (length(scale) == 1)
+            scale <- rep(scale, ncol(x))
 
-		if (any(scale))
-		{
-			#co <- !apply( x[, scale, drop = FALSE], 2, var )
-			co <- !(unlist(lapply( 1:NCOL(x), function(i) {var(x[,i]);} ))[scale] )
-			if (any(co))
-			{
-				warning(paste("Variable(s)", paste(sQuote(colnames(x[,scale,  drop = FALSE])[co]),   sep="", collapse=" and "), "constant. Cannot scale data."))
-				scale <- rep(FALSE, ncol(x))
-			}
-			else
-			{
-				x.scale <- bigm.scale( x, scale);
-				# scale Y for regression
-				if (is.numeric(y) && (type>2))
-				{
-					y <- scale(y)
-					y.scale <- attributes(y)[c("scaled:center","scaled:scale")]
-					y <- as.vector(y)
-				}
-			}
-		}
+        if (any(scale))
+        {
+            #co <- !apply( x[, scale, drop = FALSE], 2, var )
+            co <- !(unlist(lapply( 1:NCOL(x), function(i) {var(x[,i]);} ))[scale] )
+            if (any(co))
+            {
+                warning(paste("Cannot scale data. Variable(s)", paste(sQuote(colnames(x[,scale,  drop = FALSE])[co]),   sep="", collapse=" and "), "constant. "))
+                scale <- rep(FALSE, ncol(x))
+            }
+            else
+            {
+                x.scale <- bigm.scale( x, scale);
+                # scale Y for regression
+                if (is.numeric(y) && (type>2))
+                {
+                    y <- scale(y)
+                    y.scale <- attributes(y)[c("scaled:center","scaled:scale")]
+                    y <- as.vector(y)
+                }
+            }
+        }
     }
 
     ## further parameter checks
@@ -149,49 +149,52 @@ check_var_info <- function(x, y, sparse, type, scale, subset, na.action )
     if (!is.vector(y) && !is.factor (y) )
         stop("y must be a vector or a factor.")
 
-	#### C/C++ part of rgtTrain requires the Y is sorted by -1 and 1
-	#### y.idx will be used later!
+    #### C/C++ part of rgtTrain requires the Y is sorted by -1 and 1
+    #### y.idx will be used later!
 
-	y.org <- y;
-	y.idx <- c();
-	for( y0 in sort(unique(y) ) )
-		y.idx <- c( y.idx, which( y == y0 ) );
-	y <- y[y.idx];
+    y.org <- y;
+    y.idx <- c();
+    for( y0 in sort(unique(y) ) )
+        y.idx <- c( y.idx, which( y == y0 ) );
+    y <- y[y.idx];
 
-	### x <- x[y.idx,];
-	bigm.subset( x, rows=y.idx, cols=NULL );
+    ### x <- x[y.idx,];
+    if (sparse)
+        x <- x[y.idx,]
+    else
+        bigm.subset( x, rows=y.idx, cols=NULL );
 
-    lev <- NULL
+    lev <- NULL;
     ## in case of classification: transform factors into integers
 
     if( type < EPSILON_SVR )
     {
-		if (is.factor(y))
-		{
-			lev <- levels(y)
-		}
-		else
-		{
-			if(any(as.integer(y) != y))
-			   stop("dependent variable has to be of factor or integer type for classification mode.")
-			y <- as.factor(y)
-			lev <- levels(y)
-		}
-	}
+        if (is.factor(y))
+        {
+            lev <- levels(y)
+        }
+        else
+        {
+            if(any(as.integer(y) != y))
+               stop("dependent variable has to be of factor or integer type for classification mode.")
+            y <- as.factor(y)
+            lev <- levels(y)
+        }
+    }
 
     nclass <- length(lev);
 
     return( list( nclass = nclass,
-				lev   = lev,
-				scale = scale,
-				x.scale = x.scale,
-				y.scale = y.scale,
-				y.index = y.idx,
-				y.orignal = y.org,
-				nr      = nrow(x),
-				nac     = nac,
-				x       = x,
-				y       = y ) );
+                lev   = lev,
+                scale = scale,
+                x.scale = x.scale,
+                y.scale = y.scale,
+                y.index = y.idx,
+                y.orignal = y.org,
+                nr      = nrow(x),
+                nac     = nac,
+                x       = x,
+                y       = y ) );
 
 
 }
@@ -219,16 +222,16 @@ svm.default <- function (x,
           subset,
           na.action = na.omit)
 {
-cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
+    cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
 
     if ((is.vector(x) && is.atomic(x)))
-        x <- t(t(x))
+        x <- t(t(x));
 
     if(inherits(x, "Matrix"))
     {
-        library("SparseM")
-        library("Matrix")
-        x <- as(x, "matrix.csr")
+        library("SparseM");
+        library("Matrix");
+        x <- as(x, "matrix.csr");
     }
 
     if(inherits(x, "simple_triplet_matrix"))
@@ -242,10 +245,10 @@ cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "deg
                  dimension = c(x$nrow, x$ncol))
     }
 
-    if (sparse <- inherits(x, "matrix.csr"))
+    if (sparse <- inherits(x, "matrix.csr") ||  inherits(x, "dgCMatrix" ))
     {
-    	library("SparseM")
-	}
+        library("SparseM")
+    }
 
     ## NULL parameters?
     if(is.null(degree)) stop(sQuote("degree"), " must not be NULL!")
@@ -262,66 +265,66 @@ cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "deg
     ## only support C-classification
     if (is.null(type))
         type <- ifelse ( is.factor(y), "C-classification", "eps-regression");
-	type.name <- type;
-	type <- C_CLASSFICATION;
+
+    type.name <- type;
+    type <- C_CLASSFICATION;
     if (type.name != "C-classification" && type.name != "eps-regression")
-    	stop("Rgtsvm only support C-classification and eps-regression!")
-	else
-		if(type.name == "eps-regression") type <- EPSILON_SVR;
+        stop("Rgtsvm only support C-classification and eps-regression!")
+    else
+        if(type.name == "eps-regression") type <- EPSILON_SVR;
 
     if (type != C_CLASSFICATION && length(class.weights) > 0)
     {
-        class.weights <- NULL
-        warning(sQuote("class.weights"), " are set to NULL for regression mode. For classification, use a _factor_ for ", sQuote("y"),", or specify the correct ", sQuote("type"), " argument.")
+        class.weights <- NULL;
+        warning(sQuote("class.weights"), " are set to NULL for regression mode. For classification, use a _factor_ for ", sQuote("y"),", or specify the correct ", sQuote("type"), " argument.");
     }
 
-	## kernel type
+    ## kernel type
     kernel <- pmatch(kernel, c("linear",
                                "polynomial",
                                "radial",
-                               "sigmoid"), 99) - 1
+                               "sigmoid"), 99) - 1;
 
-    if (kernel > 10) stop("wrong kernel specification!")
-    if (is.null(kernel)) stop("kernel argument must not be NULL!")
-    if (is.null(sparse)) stop("sparse argument must not be NULL!")
+    if (kernel > 10) stop("wrong kernel specification!");
+    if (is.null(kernel)) stop("kernel argument must not be NULL!");
+    if (is.null(sparse)) stop("sparse argument must not be NULL!");
 
+    if( !sparse && ( class(x) %in% c("matrix", "data.frame") ) )
+    {
+        if( class(x) == "data.frame" ) x <- as.matrix(x);
 
-	if( !sparse && ( class(x) %in% c("matrix", "data.frame") ) )
-	{
-		if( class(x) == "data.frame" ) x <- as.matrix(x);
+        x.backup <- x;
+        x <- attach.bigmatrix(x.backup);
+    }
 
-		x.backup <- x;
-		x <- attach.bigmatrix(x.backup);
-	}
+    # After this push, x$data will be scaled, so we have to save it to a RDS file(rds.save=TRUE).
+    if ( inherits(x, "BigMatrix.refer") && no.change.x)
+        bigm.push(x, rds.save=TRUE);
 
-	# After this push, x$data will be scaled, so we have to save it to a RDS file(rds.save=TRUE).
-	if ( inherits(x, "BigMatrix.refer") && no.change.x)
-		bigm.push(x, rds.save=TRUE);
-
-	var.info <- check_var_info( x, y, sparse, type, scale, subset, na.action )
+    var.info <- check_var_info( x, y, sparse, type, scale, subset, na.action )
 
     if ( cross > var.info$nr )
         stop(sQuote("cross"), " cannot exceed the number of observations!")
 
-	biased <- ifelse(var.info$nclass<=2, TRUE, FALSE);
+    biased <- ifelse(var.info$nclass<=2, TRUE, FALSE);
 
-	param <- list(type=type, type.name = type.name, kernel=kernel, degree=degree, gamma=gamma,
-			 coef0=coef0, cost=cost, tolerance=tolerance, epsilon=epsilon,
-			 shrinking=shrinking, cross=cross, rough.cross=rough.cross,
-			 sparse=sparse, probability=probability,
-			 biased = biased, fitted=fitted, nclass = var.info$nclass, class.weights= class.weights,
-			 verbose = verbose);
+    param <- list(type=type, type.name = type.name, kernel=kernel, degree=degree, gamma=gamma,
+             coef0=coef0, cost=cost, tolerance=tolerance, epsilon=epsilon,
+             shrinking=shrinking, cross=cross, rough.cross=rough.cross,
+             sparse=sparse, probability=probability,
+             biased = biased, fitted=fitted, nclass = var.info$nclass, class.weights= class.weights,
+             verbose = verbose);
 
-	x <- var.info$x;
-	y <- var.info$y;
-	var.info$y <- NULL;
-	x.scale <- var.info$x.scale;
-	y.scale <- var.info$y.scale;
+    x <- var.info$x;
+    y <- var.info$y;
+    var.info$y <- NULL;
+    x.scale <- var.info$x.scale;
+    y.scale <- var.info$y.scale;
 
-	if( type == C_CLASSFICATION)
-		cret <- gtsvmtrain.classfication.call( y, x, param, verbose=verbose );
-	if( type == EPSILON_SVR)
-		cret <- gtsvmtrain.regression.call( y, x, param, verbose=verbose );
+    if( type == C_CLASSFICATION)
+        cret <- gtsvmtrain.classfication.call( y, x, param, verbose=verbose );
+    if( type == EPSILON_SVR)
+        cret <- gtsvmtrain.regression.call( y, x, param, verbose=verbose );
 
     gtsvm.class <- ifelse( cret$nclasses==2, 1, cret$nclasses );
     if (missing(subset)) subset <- NULL;
@@ -375,14 +378,14 @@ cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "deg
                  t.elapsed = cret$t.elapsed,
                  na.action = var.info$nac );
 
-	if (cross > 0 )
-	{
-		if (inherits(x, "BigMatrix.refer") ) bigm.push(x);
-		cross.ret <- cross_validation( y, x, param );
-		if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
+    if (cross > 0 )
+    {
+        if (inherits(x, "BigMatrix.refer") ) bigm.push(x);
+        cross.ret <- cross_validation( y, x, param );
+        if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 
-		ret$cross <- param$cross;
-		ret$rough.cross <- param$rough.cross ;
+        ret$cross <- param$cross;
+        ret$rough.cross <- param$rough.cross ;
 
         if ( type > 2)
         {
@@ -396,46 +399,46 @@ cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "deg
             ret$accuracies   <- cross.ret$cresults;
             ret$tot.accuracy <- cross.ret$ctotal1;
         }
-	}
-
-	ret$host <-  try(system("hostname", intern = TRUE),silent=T);
-	class (ret) <- "gtsvm"
-
-	if (fitted) {
-    	if(type == C_CLASSFICATION)
-    	{
-			org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
-			ret$fitted <- as.factor(cret$predict[org.idx]) ;
-			levels( ret$fitted ) <- var.info$lev;
-
-			ret$decision.values <- attr( ret$fitted, "decision.values" )
-			attr(ret$fitted, "decision.values") <- NULL;
-
-			ret$fitted.accuracy <- length( which( ret$fitted == var.info$y.orignal ) )/length(y)
-       	}
-       	else
-       	{
-			org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
-
-			ret$decision.values <- matrix( cret$predict[ org.idx ], ncol=1) ;
-			ret$fitted <- cret$predict[ org.idx ];
-			y1 <- y[ org.idx ]
-
-			if(!is.null(y.scale))
-			{
-				ret$fitted <- ret$fitted * y.scale$"scaled:scale" + y.scale$"scaled:center";
-				y1 <- y1 * y.scale$"scaled:scale" + y.scale$"scaled:center";
-			}
-
-	    	y1.v <- ret$fitted;
-	    	ret$fitted.MSE <- sum(( y1 - y1.v )^2, na.rm=T)/length(y1);
-		    ret$fitted.r2  <- ( length(y1)* sum(y1.v*y1, na.rm=T) - sum(y1.v, na.rm=T)*sum(y1, na.rm=T) )^2 / ( length(y1)*sum(y1.v^2, na.rm=T) - (sum(y1.v, na.rm=T))^2) / ( length(y1)*sum(y1^2, na.rm=T)- (sum(y1, na.rm=T))^2);
-		    ret$residuals <- (y1 - y1.v)
-       	}
     }
 
-	### restore x$data
-	if(inherits(x, "BigMatrix.refer") && no.change.x) bigm.pop(x);
+    ret$host <-  try(system("hostname", intern = TRUE),silent=T);
+    class (ret) <- "gtsvm";
+
+    if (fitted) {
+        if(type == C_CLASSFICATION)
+        {
+            org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
+            ret$fitted <- as.factor(cret$predict[org.idx]);
+            levels( ret$fitted ) <- var.info$lev;
+
+            ret$decision.values <- attr( ret$fitted, "decision.values" );
+            attr(ret$fitted, "decision.values") <- NULL;
+
+            ret$fitted.accuracy <- length( which( ret$fitted == var.info$y.orignal ) )/length(y);
+        }
+        else
+        {
+            org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
+
+            ret$decision.values <- matrix( cret$predict[ org.idx ], ncol=1) ;
+            ret$fitted <- cret$predict[ org.idx ];
+            y1 <- y[ org.idx ];
+
+            if(!is.null(y.scale))
+            {
+                ret$fitted <- ret$fitted * y.scale$"scaled:scale" + y.scale$"scaled:center";
+                y1 <- y1 * y.scale$"scaled:scale" + y.scale$"scaled:center";
+            }
+
+            y1.v <- ret$fitted;
+            ret$fitted.MSE <- sum(( y1 - y1.v )^2, na.rm=T)/length(y1);
+            ret$fitted.r2  <- ( length(y1)* sum(y1.v*y1, na.rm=T) - sum(y1.v, na.rm=T)*sum(y1, na.rm=T) )^2 / ( length(y1)*sum(y1.v^2, na.rm=T) - (sum(y1.v, na.rm=T))^2) / ( length(y1)*sum(y1^2, na.rm=T)- (sum(y1, na.rm=T))^2);
+            ret$residuals <- (y1 - y1.v);
+        }
+    }
+
+    ### restore x$data
+    if(inherits(x, "BigMatrix.refer") && no.change.x) bigm.pop(x);
 
     ret
 }
@@ -443,114 +446,114 @@ cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "deg
 # Cross-Validation-routine from svm-train in R code
 cross_validation <- function ( y, x, param )
 {
-	y.pre <- rep(NA, length(y));
+    y.pre <- rep(NA, length(y));
 
-	idx.shuffle <- sample(1:length(y));
-	y <- y[ idx.shuffle ];
-	if ( inherits(x, "BigMatrix.refer") ) bigm.subset( x, rows=idx.shuffle, cols=NULL ) else x <- x[idx.shuffle, ];
+    idx.shuffle <- sample(1:length(y));
+    y <- y[ idx.shuffle ];
+    if ( inherits(x, "BigMatrix.refer") ) bigm.subset( x, rows=idx.shuffle, cols=NULL ) else x <- x[idx.shuffle, ];
 
-	breaks <- round(seq(1, length(y), length.out=param$cross+1));
-	cresults <- c();
+    breaks <- round(seq(1, length(y), length.out=param$cross+1));
+    cresults <- c();
 
-	for(i in 1:(length(breaks)-1))
-	{
-		idx.cross <- c(breaks[i]:breaks[i+1]);
+    for(i in 1:(length(breaks)-1))
+    {
+        idx.cross <- c(breaks[i]:breaks[i+1]);
 
-		if( param$type == C_CLASSFICATION)
-		{
-			if ( inherits(x, "BigMatrix.refer") )
-			{
-				bigm.push(x);
-				bigm.subset(x, rows = -idx.cross );
-				x0 <- x;
-			}
-			else
-				x0 <- x[-idx.cross,];
+        if( param$type == C_CLASSFICATION)
+        {
+            if ( inherits(x, "BigMatrix.refer") )
+            {
+                bigm.push(x);
+                bigm.subset(x, rows = -idx.cross );
+                x0 <- x;
+            }
+            else
+                x0 <- x[-idx.cross,];
 
-			sret <- gtsvmtrain.classfication.call( y[ -idx.cross ], x0, param, final.result=TRUE, verbose=FALSE, ignoreNoProgress=TRUE );
-			if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
+            sret <- gtsvmtrain.classfication.call( y[ -idx.cross ], x0, param, final.result=TRUE, verbose=FALSE, ignoreNoProgress=TRUE );
+            if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 
-			if ( inherits(x, "BigMatrix.refer") )
-			{
-				bigm.push(x);
-				bigm.subset(x, rows = idx.cross );
-				x0 <- x;
-			}
-			else
-				x0 <- x[idx.cross,];
+            if ( inherits(x, "BigMatrix.refer") )
+            {
+                bigm.push(x);
+                bigm.subset(x, rows = idx.cross );
+                x0 <- x;
+            }
+            else
+                x0 <- x[idx.cross,];
 
-			pret <- gtsvmpredict.classfication.call( x0, param$sparse, sret, verbose=FALSE );
-			if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
+            pret <- gtsvmpredict.classfication.call( x0, param$sparse, sret, verbose=FALSE );
+            if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 
-			if( sret$nclasses==2 )
-				y.pre [idx.cross] <- levels(y)[as.factor(pret$ret)]
-			else
-			{
-				ret2 <- matrix( pret$dec[ 1:(length(idx.cross)*param$nclass) ],
-								nrow = length(idx.cross), ncol= param$nclass  );
-				y.pre [idx.cross] <- apply(ret2, 1, which.max);
-			}
+            if ( sret$nclasses==2 )
+                y.pre [idx.cross] <- levels(y)[as.factor(pret$ret)]
+            else
+            {
+                ret2 <- matrix( pret$dec[ 1:(length(idx.cross)*param$nclass) ],
+                                nrow = length(idx.cross), ncol= param$nclass  );
+                y.pre [idx.cross] <- apply(ret2, 1, which.max);
+            }
 
-			cresults[i] = 100.0 * sum( as.integer(y.pre [idx.cross] == y[idx.cross]) )/length(idx.cross);
-		}
+            cresults[i] = 100.0 * sum( as.integer(y.pre [idx.cross] == y[idx.cross]) )/length(idx.cross);
+        }
 
 
-		if( param$type == EPSILON_SVR)
-		{
-			if ( inherits(x, "BigMatrix.refer") )
-			{
-				bigm.push(x);
-				bigm.subset(x, rows = -idx.cross );
-				x0 <- x;
-			}
-			else
-				x0 <- x[-idx.cross,];
+        if( param$type == EPSILON_SVR)
+        {
+            if ( inherits(x, "BigMatrix.refer") )
+            {
+                bigm.push(x);
+                bigm.subset(x, rows = -idx.cross );
+                x0 <- x;
+            }
+            else
+                x0 <- x[-idx.cross,];
 
-			sret <- gtsvmtrain.regression.call( y[ -idx.cross ], x0, param, final.result=TRUE, verbose=FALSE, ignoreNoProgress=TRUE );
-			if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
+            sret <- gtsvmtrain.regression.call( y[ -idx.cross ], x0, param, final.result=TRUE, verbose=FALSE, ignoreNoProgress=TRUE );
+            if ( inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 
-			if (inherits(x, "BigMatrix.refer") )
-			{
-				bigm.push(x);
-				bigm.subset(x, rows = idx.cross );
-				x0 <- x;
-			}
-			else
-				x0 <- x[idx.cross,];
+            if (inherits(x, "BigMatrix.refer") )
+            {
+                bigm.push(x);
+                bigm.subset(x, rows = idx.cross );
+                x0 <- x;
+            }
+            else
+                x0 <- x[idx.cross,];
 
-			pret <- gtsvmpredict.regression.call( x0, param$sparse, sret, verbose=FALSE);
-			if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
+            pret <- gtsvmpredict.regression.call( x0, param$sparse, sret, verbose=FALSE);
+            if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 
-			y.pre [idx.cross] <- pret$ret;
-			cresults[i] = sum(( y.pre[idx.cross] - y[idx.cross])^2 )/length(idx.cross)
-		}
+            y.pre [idx.cross] <- pret$ret;
+            cresults[i] = sum(( y.pre[idx.cross] - y[idx.cross])^2 )/length(idx.cross)
+        }
 
-		if( param$rough.cross >0 && param$rough.cross==i)
-			break;
+        if( param$rough.cross >0 && param$rough.cross==i)
+            break;
 
-	}
+    }
 
-	if( any( which( is.na(y.pre) | is.na(y) ) ) )
-	{
-		y.sel <- !is.na(y.pre) & !is.na(y);
-		y.pre <- y.pre[y.sel];
-		y     <- y[y.sel];
-	}
+    if( any( which( is.na(y.pre) | is.na(y) ) ) )
+    {
+        y.sel <- !is.na(y.pre) & !is.na(y);
+        y.pre <- y.pre[y.sel];
+        y     <- y[y.sel];
+    }
 
-	if(param$type == EPSILON_SVR )
-	{
-	    # MSE
-	    ctotal1 <- sum((y.pre-y)^2)/length(y);
-	    # R2
-	    ctotal2 <- (length(y)* sum(y.pre*y) - sum(y.pre)*sum(y) )^2 / ( length(y)*sum(y.pre^2) - (sum(y.pre))^2) / ( length(y)*sum(y^2)- (sum(y))^2);
-	}
-	else
-	{
-		ctotal1 <- 100.0 * sum(y.pre==y)/length(y);
-	    ctotal2 <- NA;
-	}
+    if(param$type == EPSILON_SVR )
+    {
+        # MSE
+        ctotal1 <- sum((y.pre-y)^2)/length(y);
+        # R2
+        ctotal2 <- (length(y)* sum(y.pre*y) - sum(y.pre)*sum(y) )^2 / ( length(y)*sum(y.pre^2) - (sum(y.pre))^2) / ( length(y)*sum(y^2)- (sum(y))^2);
+    }
+    else
+    {
+        ctotal1 <- 100.0 * sum(y.pre==y)/length(y);
+        ctotal2 <- NA;
+    }
 
-	return(list(ctotal1=ctotal1, ctotal2=ctotal2, cresults=cresults));
+    return(list(ctotal1=ctotal1, ctotal2=ctotal2, cresults=cresults));
 }
 
 
@@ -565,67 +568,67 @@ predict.gtsvm <- function (object, newdata,
         return(fitted(object))
 
     if (object$tot.nSV < 1)
-        stop("Model is empty!")
+        stop("Model is empty!");
 
     if(inherits(newdata, "Matrix"))
     {
-        library("SparseM")
-        library("Matrix")
-        newdata <- as(newdata, "matrix.csr")
+        library("SparseM");
+        library("Matrix");
+        newdata <- as(newdata, "matrix.csr");
     }
 
     if(inherits(newdata, "simple_triplet_matrix"))
     {
-       library("SparseM")
-       ind <- order(newdata$i, newdata$j)
+       library("SparseM");
+       ind <- order(newdata$i, newdata$j);
        newdata <- new("matrix.csr",
                       ra = newdata$v[ind],
                       ja = newdata$j[ind],
                       ia = as.integer(cumsum(c(1, tabulate(newdata$i[ind])))),
-                      dimension = c(newdata$nrow, newdata$ncol))
-   	}
+                      dimension = c(newdata$nrow, newdata$ncol));
+    }
 
-    sparse <- inherits(newdata, "matrix.csr")
+    sparse <- inherits(newdata, "matrix.csr");
     if (object$sparse || sparse)
-        library("SparseM")
+        library("SparseM");
 
-    act <- NULL
+    act <- NULL;
     if ((is.vector(newdata) && is.atomic(newdata)))
-        newdata <- t(t(newdata))
+        newdata <- t(t(newdata));
 
     if (sparse)
-        newdata <- SparseM::t(SparseM::t(newdata))
+        newdata <- SparseM::t(SparseM::t(newdata));
 
     preprocessed <- !is.null(attr(newdata, "na.action"))
     rowns <- if (!is.null(rownames(newdata)))
-		    	rownames(newdata)
-		    else
-		        1:nrow(newdata);
+                rownames(newdata)
+            else
+                1:nrow(newdata);
 
-	if( inherits(newdata, "BigMatrix.refer") ) bigm.push(newdata);
+    if( inherits(newdata, "BigMatrix.refer") ) bigm.push(newdata);
 
     if (!object$sparse)
     {
         if (inherits(object, "svm.formula"))
         {
             if(is.null(colnames(newdata)))
-                colnames(newdata) <- colnames(object$SV)
+                colnames(newdata) <- colnames(object$SV);
 
-            newdata <- na.action(newdata)
-            act <- attr(newdata, "na.action")
+            newdata <- na.action(newdata);
+            act <- attr(newdata, "na.action");
             newdata <- model.matrix(delete.response(terms(object)),
-                                    as.data.frame(newdata))
+                                    as.data.frame(newdata));
         }
         else
         {
-        	if( !inherits(newdata, "BigMatrix.refer") )
-        	{
-	            newdata <- na.action(as.matrix(newdata))
-	            act <- attr(newdata, "na.action")
+            if( !inherits(newdata, "BigMatrix.refer") )
+            {
+                newdata <- na.action(as.matrix(newdata));
+                act <- attr(newdata, "na.action");
             }
             else
             {
-            	act <- bigm.naction( newdata, na.action );
+                act <- bigm.naction( newdata, na.action );
             }
         }
     }
@@ -635,49 +638,49 @@ predict.gtsvm <- function (object, newdata,
 
     if (any(object$scaled))
     {
-    	if( !inherits( newdata, "BigMatrix.refer") )
-         	newdata[,object$scaled] <-
-         	   scale( newdata[, object$scaled, drop = FALSE], center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale")
+        if( !inherits( newdata, "BigMatrix.refer") )
+             newdata[,object$scaled] <-
+                scale( newdata[, object$scaled, drop = FALSE], center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale")
         else
-        	bigm.scale( newdata,  object$scaled, center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale" );
-	}
+            bigm.scale( newdata,  object$scaled, center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale" );
+    }
 
     if (ncol(object$SV) != ncol(newdata))
-        stop ("test data does not match model !")
+        stop ("test data does not match model !");
 
-	param <- list( decision.values = decision.values, probability = probability );
+    param <- list( decision.values = decision.values, probability = probability );
 
-	# Call C/C++ interface to do predict
-	if(object$type == C_CLASSFICATION)
-		ret <- gtsvmpredict.classfication.call( newdata, sparse, object, param, verbose=verbose)
-	else if(object$type == EPSILON_SVR)
-		ret <- gtsvmpredict.regression.call( newdata, sparse, object, param, verbose=verbose)
-	else
-		stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+    # Call C/C++ interface to do predict
+    if(object$type == C_CLASSFICATION)
+        ret <- gtsvmpredict.classfication.call( newdata, sparse, object, param, verbose=verbose)
+    else if(object$type == EPSILON_SVR)
+        ret <- gtsvmpredict.regression.call( newdata, sparse, object, param, verbose=verbose)
+    else
+        stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
 
-	ret2 <- ret$ret;
-	if (is.character(object$levels)) # classification: return factors
+    ret2 <- ret$ret;
+    if (is.character(object$levels)) # classification: return factors
     {
-    	ret2 <- as.factor(ret$ret) ;
+        ret2 <- as.factor(ret$ret);
         levels( ret2 ) <- object$levels;
-	}
+    }
     else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
-        ret2 <- ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center"
+        ret2 <- ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center";
 
-    names(ret2) <- rowns
+    names(ret2) <- rowns;
     ret2 <- napredict(act, ret2);
 
     if (decision.values)
     {
-        colns = c()
+        colns = c();
         for (i in 1:(object$nclasses - 1))
             for (j in (i + 1):object$nclasses)
                 colns <- c(colns,
                            paste(object$levels[object$labels[i]],
                                  "/", object$levels[object$labels[j]],
-                                 sep = ""))
+                                 sep = ""));
         attr(ret2, "decision.values") <-
-            napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = TRUE, dimnames = list(rowns, colns) ) )
+            napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = TRUE, dimnames = list(rowns, colns) ) );
     }
 
     if (probability && object$type < 2)
@@ -687,36 +690,36 @@ predict.gtsvm <- function (object, newdata,
         else
             attr(ret2, "probabilities") <-
                 napredict(act, matrix(ret$prob, nrow = nrow(newdata), byrow = TRUE,
-                			 		  dimnames = list(rowns, object$levels[object$labels]) ) )
+                                       dimnames = list(rowns, object$levels[object$labels]) ) );
     }
 
-	if( inherits(newdata, "BigMatrix.refer") ) bigm.pop(newdata);
+    if( inherits(newdata, "BigMatrix.refer") ) bigm.pop(newdata);
 
     ret2
 }
 
 print.gtsvm <- function (x, ...)
 {
-    cat("\nCall:", deparse(x$call, 0.8 * getOption("width")), "\n", sep="\n")
-    cat("Parameters:\n")
-    cat("   SVM-Type: ", x$type.name, "\n")
+    cat("\nCall:", deparse(x$call, 0.8 * getOption("width")), "\n", sep="\n");
+    cat("Parameters:\n");
+    cat("   SVM-Type: ", x$type.name, "\n");
     cat(" SVM-Kernel: ", c("linear",
                            "polynomial",
                            "radial",
-                           "sigmoid")[x$kernel+1], "\n")
+                           "sigmoid")[x$kernel+1], "\n");
 
-    cat("       cost: ", x$cost, "\n")
+    cat("       cost: ", x$cost, "\n");
     if (x$kernel==1)
-        cat("     degree: ", x$degree, "\n")
-    cat("      gamma: ", x$gamma, "\n")
+        cat("     degree: ", x$degree, "\n");
+    cat("      gamma: ", x$gamma, "\n");
     if (x$kernel==1 || x$kernel==3)
-        cat("     coef.0: ", x$coef0, "\n")
+        cat("     coef.0: ", x$coef0, "\n");
 
-    cat("    tolerance: ", x$tolerance, "\n")
-	cat(" time elapsed: ", x$t.elapsed[3], "\n\n");
+    cat("    tolerance: ", x$tolerance, "\n");
+    cat(" time elapsed: ", x$t.elapsed[3], "\n\n");
 
-    cat("\nNumber of Support Vectors: ", x$tot.nSV)
-    cat("\n\n")
+    cat("\nNumber of Support Vectors: ", x$tot.nSV);
+    cat("\n\n");
 
 }
 
@@ -725,13 +728,13 @@ summary.gtsvm <- function(object, ...)
 
 print.summary.gtsvm <- function (x, ...)
 {
-    print.gtsvm(x)
+    print.gtsvm(x);
 
-    cat(" (", x$nSV, ")\n\n")
-    cat("\nNumber of Classes: ", x$nclasses, "\n\n")
-    cat("Levels:", if(is.numeric(x$levels)) "(as integer)", "\n", x$levels)
+    cat(" (", x$nSV, ")\n\n");
+    cat("\nNumber of Classes: ", x$nclasses, "\n\n");
+    cat("Levels:", if(is.numeric(x$levels)) "(as integer)", "\n", x$levels);
 
-    cat("\n\n")
+    cat("\n\n");
 }
 
 #scale.data.frame <- function(x, center = TRUE, scale = TRUE)
@@ -751,49 +754,49 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
          grid = 50, slice = list(), symbolPalette = palette(),
          svSymbol = "x", dataSymbol = "o", ...)
 {
-        if (is.null(formula) && ncol(data) == 3)
+    if (is.null(formula) && ncol(data) == 3)
+    {
+        formula <- formula(delete.response(terms(x)));
+        formula[2:3] <- formula[[2]][2:3];
+    }
+
+    if (is.null(formula))
+        stop("missing formula.");
+
+    if (fill)
+    {
+        sub <- model.frame(formula, data);
+        xr <- seq(min(sub[, 2]), max(sub[, 2]), length = grid);
+        yr <- seq(min(sub[, 1]), max(sub[, 1]), length = grid);
+        l <- length(slice);
+
+        if (l < ncol(data) - 3)
         {
-            formula <- formula(delete.response(terms(x)))
-            formula[2:3] <- formula[[2]][2:3]
+            slnames <- names(slice);
+            slice <- c(slice, rep(list(0), ncol(data) - 3 - l));
+            names <- labels(delete.response(terms(x)));
+            names(slice) <- c(slnames, names[!names %in% c(colnames(sub), slnames)]);
         }
 
-        if (is.null(formula))
-            stop("missing formula.")
-
-        if (fill)
-        {
-            sub <- model.frame(formula, data)
-            xr <- seq(min(sub[, 2]), max(sub[, 2]), length = grid)
-            yr <- seq(min(sub[, 1]), max(sub[, 1]), length = grid)
-            l <- length(slice)
-
-            if (l < ncol(data) - 3)
-            {
-                slnames <- names(slice)
-                slice <- c(slice, rep(list(0), ncol(data) - 3 - l))
-                names <- labels(delete.response(terms(x)))
-                names(slice) <- c(slnames, names[!names %in% c(colnames(sub), slnames)])
+        for (i in names(which(sapply(data, is.factor))))
+            if (!is.factor(slice[[i]])) {
+                levs <- levels(data[[i]]);
+                lev <- if (is.character(slice[[i]])) slice[[i]] else levs[1];
+                fac <- factor(lev, levels = levs);
+                if (is.na(fac))
+                   stop(paste("Level", dQuote(lev), "could not be found in factor", sQuote(i)));
+                slice[[i]] <- fac;
             }
 
-            for (i in names(which(sapply(data, is.factor))))
-                if (!is.factor(slice[[i]])) {
-                    levs <- levels(data[[i]])
-                    lev <- if (is.character(slice[[i]])) slice[[i]] else levs[1]
-                    fac <- factor(lev, levels = levs)
-                    if (is.na(fac))
-                        stop(paste("Level", dQuote(lev), "could not be found in factor", sQuote(i)))
-                    slice[[i]] <- fac
-                }
+        lis <- c(list(yr), list(xr), slice);
+        names(lis)[1:2] <- colnames(sub);
+        new <- expand.grid(lis)[, labels(terms(x))];
+        preds <- predict(x, new);
 
-            lis <- c(list(yr), list(xr), slice);
-            names(lis)[1:2] <- colnames(sub);
-            new <- expand.grid(lis)[, labels(terms(x))];
-            preds <- predict(x, new);
-
-            filled.contour(xr, yr,
-                           matrix(as.numeric(preds),
-                                  nrow = length(xr), byrow = TRUE),
-                           plot.axes = {
+        filled.contour(xr, yr,
+               matrix(as.numeric(preds),
+               nrow = length(xr), byrow = TRUE),
+               plot.axes = {
                                axis(1)
                                axis(2)
                                colind <- as.numeric(model.response(model.frame(x, data)))
@@ -804,26 +807,26 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
                                points(formula, data = dat1, pch = dataSymbol, col = coltmp1)
                                points(formula, data = dat2, pch = svSymbol, col = coltmp2)
                            },
-                           levels = 1:(length(levels(preds)) + 1),
-                           key.axes = axis(4, 1:(length(levels(preds))) + 0.5,
-                           labels = levels(preds),
-                           las = 3),
-                           plot.title = title(main = "SVM classification plot",
-                           xlab = names(lis)[2], ylab = names(lis)[1]), ...);
-        }
-        else {
-            plot(formula, data = data, type = "n", ...)
-            colind <- as.numeric(model.response(model.frame(x, data)))
+               levels = 1:(length(levels(preds)) + 1),
+               key.axes = axis(4, 1:(length(levels(preds))) + 0.5,
+               labels = levels(preds),
+               las = 3),
+               plot.title = title(main = "SVM classification plot",
+               xlab = names(lis)[2], ylab = names(lis)[1]), ...);
+    }
+    else {
+        plot(formula, data = data, type = "n", ...);
+        colind <- as.numeric(model.response(model.frame(x, data)));
 
-            dat1 <- data[-x$index,]
-            dat2 <- data[x$index,]
-            coltmp1 <- symbolPalette[colind[-x$index]]
-            coltmp2 <- symbolPalette[colind[x$index]]
-            points(formula, data = dat1, pch = dataSymbol, col = coltmp1)
-            points(formula, data = dat2, pch = svSymbol, col = coltmp2)
+        dat1 <- data[-x$index,];
+        dat2 <- data[x$index,];
+        coltmp1 <- symbolPalette[colind[-x$index]];
+        coltmp2 <- symbolPalette[colind[x$index]];
+        points(formula, data = dat1, pch = dataSymbol, col = coltmp1);
+        points(formula, data = dat2, pch = svSymbol, col = coltmp2);
 
-            invisible()
-        }
+        invisible();
+    }
 }
 
 predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, verbose = FALSE, ..., na.action = na.omit)
@@ -832,60 +835,61 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
         stop("No RDS files are specified.\n");
 
     if (object$tot.nSV < 1)
-        stop("Model is empty!")
+        stop("Model is empty!");
 
     if (object$sparse)
-        library("SparseM")
+        library("SparseM");
 
-	x.count <- 0;
-	rowns <- c();
-	for(rds in file.rds)
-	{
-		newdata <- readRDS(rds);
-		if (NCOL(newdata) != NCOL(object$SV))
-			stop(paste("X data in RDS file doesn't have same number of feature vectors. File=", rds, sep=""));
-		x.count <- x.count + NROW(newdata);
-		rowns <- c( rowns, rownames(newdata));
-
-		newdata <- na.action( as.matrix(newdata) )
-		act <- attr(newdata, "na.action");
-		if(!is.null(act))
-			stop( paste( "Missing values in RDS file, file=", rds ) );
-	}
-
-	param <- list( decision.values = decision.values, probability = probability );
-
-	# Call C/C++ interface to do predict
-	if(object$type == C_CLASSFICATION)
-		ret <- gtsvmpredict.classfication.batch.call( file.rds, x.count, object, param, verbose=verbose)
-	else if(object$type == EPSILON_SVR)
-		ret <- gtsvmpredict.regression.batch.call( file.rds, x.count, object, param, verbose=verbose)
-	else
-		stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
-
-	ret2 <- ret$ret;
-	if (is.character(object$levels)) # classification: return factors
+    x.count <- 0;
+    rowns <- c();
+    for(rds in file.rds)
     {
-    	ret2 <- as.factor(ret$ret) ;
+        newdata <- readRDS(rds);
+        if (NCOL(newdata) != NCOL(object$SV))
+            stop(paste("X data in RDS file doesn't have same number of feature vectors. File=", rds, sep=""));
+        x.count <- x.count + NROW(newdata);
+        rowns <- c( rowns, rownames(newdata));
+
+        newdata <- na.action( as.matrix(newdata) );
+        act <- attr(newdata, "na.action");
+        if(!is.null(act))
+            stop( paste( "Missing values in RDS file, file=", rds ) );
+    }
+
+    param <- list( decision.values = decision.values, probability = probability );
+
+    # Call C/C++ interface to do predict
+    if(object$type == C_CLASSFICATION)
+        ret <- gtsvmpredict.classfication.batch.call( file.rds, x.count, object, param, verbose=verbose)
+    else if(object$type == EPSILON_SVR)
+        ret <- gtsvmpredict.regression.batch.call( file.rds, x.count, object, param, verbose=verbose)
+    else
+        stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+
+    ret2 <- ret$ret;
+    if (is.character(object$levels)) # classification: return factors
+    {
+        ret2 <- as.factor(ret$ret) ;
         levels( ret2 ) <- object$levels;
-	}
+    }
     else if (any(object$scaled) && !is.null(object$y.scale)) # return raw values, possibly scaled back
-        ret2 <- ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center"
+        ret2 <- ret$ret * object$y.scale$"scaled:scale" + object$y.scale$"scaled:center";
 
     names(ret2) <- rowns;
-	act <- NULL;
+    act <- NULL;
 
     if (decision.values)
     {
-        colns = c()
+        colns = c();
         for (i in 1:(object$nclasses - 1))
             for (j in (i + 1):object$nclasses)
                 colns <- c(colns,
                            paste(object$levels[object$labels[i]],
                                  "/", object$levels[object$labels[j]],
-                                 sep = ""))
+                                 sep = ""));
+
         attr(ret2, "decision.values") <-
-            napredict(act, matrix(ret$dec, nrow = x.count, ncol=length(colns), byrow = TRUE, dimnames = list(rowns, colns) ) )
+            napredict(act, matrix(ret$dec, nrow = x.count, ncol=length(colns), byrow = TRUE, dimnames = list(rowns, colns) ) );
     }
 
     if (probability && object$type < 2)
@@ -895,7 +899,7 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
         else
             attr(ret2, "probabilities") <-
                 napredict(act, matrix(ret$prob, nrow = x.count, byrow = TRUE,
-                			 		  dimnames = list(rowns, object$levels[object$labels]) ) )
+                                       dimnames = list(rowns, object$levels[object$labels]) ) );
     }
 
     ret2

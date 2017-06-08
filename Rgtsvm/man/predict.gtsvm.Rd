@@ -53,5 +53,5 @@
 \seealso{
   \code{\link{svm}}
 }
-\keyword{classification}
+\keyword{predict}
 
