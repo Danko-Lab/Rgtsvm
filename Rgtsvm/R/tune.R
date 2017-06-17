@@ -222,7 +222,7 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
         model.errors[para.set] <- tunecontrol$sampling.aggregate(sampling.errors)
         model.variances[para.set] <- tunecontrol$sampling.dispersion(sampling.errors)
 
-        cat("[SVM Tuning] error=", model.errors[para.set], "variance=", model.variances[para.set], "\n");
+        ## cat("[SVM Tuning] error=", model.errors[para.set], "variance=", model.variances[para.set], "\n");
 
     }
 

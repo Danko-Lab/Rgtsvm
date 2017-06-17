@@ -17,7 +17,6 @@
 
 load.svmlight = function( filename, .loadbyC=TRUE )
 {
-    require(Matrix);
     if( !.loadbyC )
     {
         content = readLines( filename )
@@ -42,7 +41,8 @@ load.svmlight = function( filename, .loadbyC=TRUE )
     }
 
     class(makemat) = "numeric";
-    yx = sparseMatrix(i = makemat[,1], j = makemat[,2]+2, x = makemat[,3]);
+    requireNamespace("Matrix");
+    yx = Matrix::sparseMatrix(i = makemat[,1], j = makemat[,2]+2, x = makemat[,3]);
     return( yx );
 }
 

@@ -25,7 +25,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
     y.idx <- c();
     for( y0 in sort(unique(y) ) )
     {
-        cat("* Lable=", y0, length(which( y == y0 ) ), "\n");
+        if (verbose) cat("* Lable=", y0, length(which( y == y0 ) ), "\n");
         y.idx <- c( y.idx, which( y == y0 ) );
     }
 
@@ -111,7 +111,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 
                 as.integer(verbose),
                 error    = as.integer(1),
-                DUP      = FALSE,
+                #DUP      = FALSE,
                 PACKAGE  = "Rgtsvm");
 
     t.elapsed <- proc.time() - ptm;
@@ -180,7 +180,6 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
         stop ("test data does not match model !")
 
     ptm <- proc.time();
-
     cret <- .C ("gtsvmpredict_classfication",
                as.integer (param$decision.values),
                as.integer (param$probability),
@@ -225,7 +224,7 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
 
                as.integer(verbose),
                error = as.integer(1),
-               DUP      = FALSE,
+               #DUP      = FALSE,
                PACKAGE = "Rgtsvm");
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
@@ -309,7 +308,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=F
 
                 as.integer(verbose),
                 error = as.integer(1),
-                DUP      = FALSE,
+                #DUP      = FALSE,
                 PACKAGE  = "Rgtsvm");
 
     t.elapsed <- proc.time() - ptm;
@@ -413,7 +412,7 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
 
                    as.integer(verbose),
                    error = as.integer(1),
-                   DUP      = FALSE,
+                   #DUP      = FALSE,
                    PACKAGE = "Rgtsvm");
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
@@ -467,7 +466,7 @@ gtsvmpredict.regression.batch.call<-function( file.rds, x.count, obj.train, para
 
                    as.integer(verbose),
                    error = as.integer(1),
-                   DUP     = TRUE,
+                   #DUP     = TRUE,
                    PACKAGE = "Rgtsvm");
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
@@ -521,7 +520,7 @@ gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, p
 
                    as.integer(verbose),
                    error = as.integer(1),
-                   DUP     = TRUE,
+                   #DUP     = TRUE,
                    PACKAGE = "Rgtsvm");
 
     if ( cret$error!=0 ) stop("Error in GPU process.")

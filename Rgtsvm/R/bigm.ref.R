@@ -501,7 +501,9 @@ cat("COL:", block.target, "->", block.current, "\n");
                 as.integer(NROW(block.current)),
                 as.integer(block.target),
                 as.integer(NROW(block.target)),
-                NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
+                NAOK = TRUE,
+                #DUP = FALSE,
+                PACKAGE="Rgtsvm");
 
             temp <- cols.current[block.current];
             cols.current[block.current] <- cols.target[block.target];
@@ -517,7 +519,7 @@ cat("COL:", block.target, "->", block.current, "\n");
         cursor <- cursor +1;
     }
 
-    if (any(cols.current != cols.target)) error("stop to move");
+    if (any(cols.current != cols.target)) stop("stop to move");
 
 }
 
@@ -566,7 +568,9 @@ cat("ROW:", block.target, "->", block.current, "\n");
                 as.integer(NROW(block.current)),
                 as.integer(block.target),
                 as.integer(NROW(block.target)),
-                NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
+                NAOK = TRUE,
+                #DUP = FALSE,
+                PACKAGE="Rgtsvm");
 
             temp <- rows.current[block.current];
             rows.current[block.current] <- rows.target[block.target];
@@ -582,7 +586,7 @@ cat("ROW:", block.target, "->", block.current, "\n");
         cursor <- cursor +1;
     }
 
-    if (any(row.current != rows.target)) error("stop to move");
+    if (any(rows.current != rows.target)) stop("stop to move");
 
 }
 

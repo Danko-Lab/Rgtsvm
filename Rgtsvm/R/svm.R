@@ -239,21 +239,21 @@ svm.default <- function (x,
           subset,
           na.action = na.omit)
 {
-    cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
+	if (verbose) cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
 
     if ((is.vector(x) && is.atomic(x)))
         x <- t(t(x));
 
     if(inherits(x, "Matrix"))
     {
-        library("SparseM");
-        library("Matrix");
+        requireNamespace("SparseM");
+        requireNamespace("Matrix");
         x <- as(x, "matrix.csr");
     }
 
     if(inherits(x, "simple_triplet_matrix"))
     {
-        library("SparseM")
+        requireNamespace("SparseM")
         ind <- order(x$i, x$j)
         x <- new("matrix.csr",
                  ra = x$v[ind],
@@ -264,7 +264,7 @@ svm.default <- function (x,
 
     if (sparse <- inherits(x, "matrix.csr") ||  inherits(x, "dgCMatrix" ))
     {
-        library("SparseM")
+        requireNamespace("SparseM")
     }
 
     ## NULL parameters?
@@ -589,14 +589,14 @@ predict.gtsvm <- function (object, newdata,
 
     if(inherits(newdata, "Matrix"))
     {
-        library("SparseM");
-        library("Matrix");
+        requireNamespace("SparseM");
+        requireNamespace("Matrix");
         newdata <- as(newdata, "matrix.csr");
     }
 
     if(inherits(newdata, "simple_triplet_matrix"))
     {
-       library("SparseM");
+       requireNamespace("SparseM");
        ind <- order(newdata$i, newdata$j);
        newdata <- new("matrix.csr",
                       ra = newdata$v[ind],
@@ -607,7 +607,7 @@ predict.gtsvm <- function (object, newdata,
 
     sparse <- inherits(newdata, "matrix.csr");
     if (object$sparse || sparse)
-        library("SparseM");
+        requireNamespace("SparseM");
 
     act <- NULL;
     if ((is.vector(newdata) && is.atomic(newdata)))
@@ -855,7 +855,7 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
         stop("Model is empty!");
 
     if (object$sparse)
-        library("SparseM");
+        requireNamespace("SparseM");
 
     x.count <- 0;
     rowns <- c();

@@ -4,7 +4,11 @@ import(graphics)
 import(grDevices)
 import(tools)
 import(methods)
-import(bit64);
+import(bit64)
+import(stats)
+import(utils)
+import(class)
+
 
 exportClasses("BigMatrix.refer")
 
