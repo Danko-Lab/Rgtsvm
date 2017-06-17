@@ -4,7 +4,7 @@
 Wrapping a big matrix into a reference class
 }
 \description{
-This function wrapps a big matrix into a reference class in order to avoid multiple variable coping when variables are passed into deep calls in R. It seems to become pointer calling in C language.
+This function wraps a big matrix into a reference class in order to avoid multiple variable copying when variables are passed into deep calls in R. It seems to become pointer calling in C language.
 }
 \usage{
 attach.bigmatrix(data)
@@ -20,20 +20,22 @@ Return a reference class with the name "BigMatrix.refer". It can be used in \cod
 \code{\link{load.bigmatrix}}
 }
 \examples{
-
-library(MASS);
+library(mvtnorm);
 size=5000;
 dimension=100;
+
 covar.mat <- matrix(runif(dimension*dimension),nrow=dimension);
-covar.mat <- t(covar.mat)%*% covar.mat;
-zero <- mvrnorm(size,mu=c(1:dimension),Sigma= covar.mat);
-one  <- mvrnorm(size,mu=c(1:dimension)-5,Sigma= covar.mat);
+covar.mat <- t(covar.mat) %*% ( covar.mat);
+covar.mat <- round( (covar.mat + t(covar.mat))/2, 4);
+
+zero <- rmvnorm(size, mean=c(1:dimension), sigma= covar.mat);
+one  <- rmvnorm(size, mean=c(1:dimension)-5, sigma= covar.mat);
 x <- rbind(zero,one);
 y <- c(rep(0,nrow(zero)),rep(1,nrow(one)));
 
-i.all <- 1:(2*size);
-i.training <- sample(i.all, length(i.all)*0.8);
-i.test <- i.all [! i.all %in% i.training ];
+i.all <- sample(1:(2*size));
+i.training <- i.all[(1:round(2*size*0.8))];
+i.test <- i.all[-c(1:round(2*size*0.8))];
 
 bigm.x <- attach.bigmatrix( data = x[ i.training,]);
 model.gpu <- svm(bigm.x,y[ i.training ],type="C-classification");

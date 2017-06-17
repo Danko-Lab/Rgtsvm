@@ -7,13 +7,14 @@ Load SVMlight data file into a sparse matrix.
 Load SVMlight data file into a sparse matrix.
 }
 \usage{
-load.svmlight(filename)
+load.svmlight(filename, .loadbyC = TRUE)
 }
 \arguments{
-  \item{filename}{SVM light filename.}
+  \item{filename}{string, SVM light filename.}
+  \item{.loadbyC}{logical value, indicating whether loading data in C or R.}
 }
 \details{
-The file must be svmlight format.(\link{http://svmlight.joachims.org/})
+The file must be svmlight format.(\href{http://svmlight.joachims.org/}{http://svmlight.joachims.org/})
 }
 \value{
 A sparse matrix is returned if the file is loaded or downloaded successfully.
