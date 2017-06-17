@@ -59,7 +59,8 @@ Rgtsvm implement the following functions on GPU package(GTSVM)
 
 > `load.svmlight`: a function to load SVMlight data file into a sparse matrix
 
-Please check the details in the manual (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-manual.pdf).
+Please check the details in the manual (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-manual.pdf) or the vignette  (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf).
+
 
 To use Rgtsvm, type: 
 
@@ -106,6 +107,8 @@ cd Rgtsvm
 R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtsvm
 
 ```
+
+Please check the vignette (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf) to see more details.
 
 ### Installation Example
 
