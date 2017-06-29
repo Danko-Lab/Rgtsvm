@@ -358,7 +358,7 @@ extern "C" void gtsvmtrain_epsregression (
 				(unsigned int)*pXInnerCol,
 				(unsigned int*)pXRowIndex,
 				(unsigned int*)pXColIndex,
-				false);
+				columnMajor);
 		}
 
 		for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
