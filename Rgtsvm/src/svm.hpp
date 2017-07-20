@@ -306,7 +306,7 @@ private:
 
 	CUDA_FLOAT_DOUBLE m_bias;
 	boost::shared_array< double > m_trainingResponses;
-	boost::shared_array< float > m_trainingAlphas;
+	boost::shared_array< double > m_trainingAlphas;
 
 	unsigned int m_logMaximumClusterSize;
 	unsigned int m_clusters;

@@ -279,8 +279,8 @@ extern "C" void gtsvmtrain_epsregression (
 	_CHECK_EXCEPTIONS_
 
 	_TRY_EXCEPTIONS_
-	boost::shared_array< float > trainingAlphas( new float[ *pXrow ] );
-	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_FLOAT, columnMajor );
+	boost::shared_array< double > trainingAlphas( new double[ *pXrow ] );
+	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_DOUBLE, columnMajor );
 
 	*pSV = 0;
 	int nLableFill = 0;
@@ -987,8 +987,8 @@ extern "C" void gtsvmtrain_classfication (
 
 	//*** for binary classfication, only one Alpha value for each sample.
 	unsigned int nCol = psvm->GetClasses();
-	boost::shared_array< float > trainingAlphas( new float[ (*pXrow) * nCol ] );
-	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_FLOAT, true );
+	boost::shared_array< double > trainingAlphas( new double[ (*pXrow) * nCol ] );
+	psvm->GetAlphas( (void*)(trainingAlphas.get()), GTSVM_TYPE_DOUBLE, columnMajor );
 
 	*pSV = 0;
 	int nLableFill = 0;
@@ -1036,11 +1036,10 @@ extern "C" void gtsvmtrain_classfication (
 	_TRY_EXCEPTIONS_
 
 	psvm->ShrinkClassfication(smallClusters, activeClusters);
-	psvm->GetAlphas( (void*)pTrainingAlphas, GTSVM_TYPE_DOUBLE, false );
+	psvm->GetAlphas( (void*)pTrainingAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
-
 
 	if(*pFitted)
 	{
@@ -1119,6 +1118,7 @@ extern "C" void gtsvmtrain_classfication (
 		_CATCH_EXCEPTIONS_
 		_CHECK_EXCEPTIONS_
 	}
+
 
 	if(*pVerbose) Rprintf("[C-SVC training] DONE!\n");
 
@@ -1261,7 +1261,7 @@ extern "C" void gtsvmpredict_classfication  (
 
 	//psvm->ClusterTrainingVectors( smallClusters, activeClusters );
 	psvm->SetBias(  -1*(*pModelRho) );
-	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, false );
+	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
 
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_

@@ -175,7 +175,6 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
                         model <- NULL;
                     }
                 );
-
                 if(is.null(model)) next;
 
                 ## predict validation set

@@ -870,7 +870,7 @@ void SVM::InitializeSparse(
 		m_trainingVectorKernelNormsSquared = boost::shared_array< float >( new float[ m_rows ] );
 
 		m_trainingResponses = boost::shared_array< double >( new double[ m_rows * m_classes ] );
-		m_trainingAlphas = boost::shared_array< float >( new float[ m_rows * m_classes ] );
+		m_trainingAlphas = boost::shared_array< double >( new double[ m_rows * m_classes ] );
 
 		ClusterTrainingVectors( smallClusters, activeClusters );
 
@@ -993,7 +993,7 @@ void SVM::InitializeDense(
 		m_trainingVectorKernelNormsSquared = boost::shared_array< float >( new float[ m_rows ] );
 
 		m_trainingResponses = boost::shared_array< double >( new double[ m_rows * m_classes ] );
-		m_trainingAlphas = boost::shared_array< float >( new float[ m_rows * m_classes ] );
+		m_trainingAlphas = boost::shared_array< double >( new double[ m_rows * m_classes ] );
 
 		ClusterTrainingVectors( smallClusters, activeClusters );
 
@@ -1062,10 +1062,10 @@ void SVM::Load(
 			m_trainingVectorKernelNormsSquared = boost::shared_array< float >( new float[ m_rows ] );
 
 			m_trainingResponses = boost::shared_array< double >( new double[ m_rows * m_classes ] );
-			m_trainingAlphas = boost::shared_array< float >( new float[ m_rows * m_classes ] );
+			m_trainingAlphas = boost::shared_array< double >( new double[ m_rows * m_classes ] );
 			if ( fread( m_trainingResponses.get(), sizeof( double ), m_rows * m_classes, file ) != m_rows * m_classes )
 				throw std::runtime_error( "Unable to read training responses" );
-			if ( fread( m_trainingAlphas.get(), sizeof( float ), m_rows * m_classes, file ) != m_rows * m_classes )
+			if ( fread( m_trainingAlphas.get(), sizeof( double ), m_rows * m_classes, file ) != m_rows * m_classes )
 				throw std::runtime_error( "Unable to read training alphas" );
 
 			if ( fread( &m_regularization, sizeof( float ), 1, file ) != 1 )
@@ -1163,7 +1163,7 @@ void SVM::Save( char const* const filename ) const {
 
 	if ( fwrite( m_trainingResponses.get(), sizeof( double ), m_rows * m_classes, file ) != m_rows * m_classes )
 		throw std::runtime_error( "Unable to write training responses" );
-	if ( fwrite( m_trainingAlphas.get(), sizeof( float ), m_rows * m_classes, file ) != m_rows * m_classes )
+	if ( fwrite( m_trainingAlphas.get(), sizeof( double ), m_rows * m_classes, file ) != m_rows * m_classes )
 		throw std::runtime_error( "Unable to write training alphas" );
 
 	if ( fwrite( &m_regularization, sizeof( float ), 1, file ) != 1 )
@@ -1220,7 +1220,7 @@ void SVM::ShrinkClassfication( bool const smallClusters, unsigned int const acti
 	boost::shared_array< float > trainingVectorNormsSquared( new float[ rows ] );
 	boost::shared_array< float > trainingVectorKernelNormsSquared( new float[ rows ] );
 	boost::shared_array< double > trainingResponses( new double[ rows * m_classes ] );
-	boost::shared_array< float > trainingAlphas( new float[ rows * m_classes ] );
+	boost::shared_array< double > trainingAlphas( new double[ rows * m_classes ] );
 
 	{	unsigned int kk = 0;
 		for ( unsigned int ii = 0; ii < m_rows; ++ii ) {
@@ -1242,12 +1242,8 @@ void SVM::ShrinkClassfication( bool const smallClusters, unsigned int const acti
 				trainingVectorNormsSquared[       kk ] = m_trainingVectorNormsSquared[       ii ];
 				trainingVectorKernelNormsSquared[ kk ] = m_trainingVectorKernelNormsSquared[ ii ];
 				for ( unsigned int jj = 0; jj < m_classes; ++jj ) {
-
-					if ( m_trainingAlphas[ ii * m_classes + jj ] != 0 ) {
-
-						trainingResponses[ kk * m_classes + jj ] = m_trainingResponses[ ii * m_classes + jj ];
-						trainingAlphas[    kk * m_classes + jj ] = m_trainingAlphas[    ii * m_classes + jj ];
-					}
+					trainingResponses[ kk * m_classes + jj ] = m_trainingResponses[ ii * m_classes + jj ];
+					trainingAlphas[    kk * m_classes + jj ] = m_trainingAlphas[    ii * m_classes + jj ];
 				}
 				++kk;
 			}
@@ -1289,7 +1285,7 @@ void SVM::ShrinkRegression( bool const smallClusters, unsigned int const activeC
 	boost::shared_array< float > trainingVectorNormsSquared( new float[ rows ] );
 	boost::shared_array< float > trainingVectorKernelNormsSquared( new float[ rows ] );
 	boost::shared_array< double > trainingResponses( new double[ rows  ] );
-	boost::shared_array< float > trainingAlphas( new float[ rows ] );
+	boost::shared_array< double > trainingAlphas( new double[ rows ] );
 
 	{	unsigned int kk = 0;
 		for ( unsigned int ii = 0; ii < nsample; ++ii ) {
@@ -1459,7 +1455,7 @@ void SVM::Deinitialize() {
 	m_trainingVectorKernelNormsSquared = boost::shared_array< float >();
 
 	m_trainingResponses = boost::shared_array< double >();
-	m_trainingAlphas = boost::shared_array< float >();
+	m_trainingAlphas = boost::shared_array< double >();
 
 	m_clusterIndices.clear();
 	m_clusterNonzeroIndices.clear();
