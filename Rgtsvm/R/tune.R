@@ -164,19 +164,20 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
                     else
                         lapply(parameters[para.set,,drop = FALSE], unlist)
 
+                model <- NULL;
                 tryCatch(
-                model <- if (useFormula)
-                        do.call(method, c(list(train.x, data = data, subset = train.ind[[sample]]),  pars, list(...) ) )
-                    else
-                        do.call(method, c(list( train.x[train.ind[[sample]],], y = train.y[train.ind[[sample]]]), pars, list(...) ) ),
-                    error=function(e)
-                    {
-                        print(e$message);
-                        model <- NULL;
-                    }
+                   model <- if (useFormula)
+                       do.call(method, c(list(train.x, data = data, subset = train.ind[[sample]]),  pars, list(...) ) )
+                   else
+                       do.call(method, c(list( train.x[train.ind[[sample]],], y = train.y[train.ind[[sample]]]), pars, list(...) ) ),
+                   error=function(e)
+                   {
+                       model <- NULL;
+                       print(e$message);
+                   }
                 );
-                if(is.null(model)) next;
 
+                if(is.null(model)) next;
                 ## predict validation set
                 pred <- predict.func(model,
                                      if (!is.null(validation.x))
