@@ -140,4 +140,6 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 
 You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+## How to cite
 
+Wang, Z., Chu, T., Choate, L. A., & Danko, C. G. (2017). [Rgtsvm: Support Vector Machines on a GPU in R.](https://arxiv.org/abs/1706.05544) arXiv preprint arXiv:1706.05544.
