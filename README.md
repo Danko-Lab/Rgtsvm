@@ -1,6 +1,6 @@
 # Rgtsvm
 
-The e1071 compatiblility SVM package for GPU architecture based on the GTSVM software (http://ttic.uchicago.edu/~cotter/projects/gtsvm/)
+The e1071 compatibility SVM package for GPU architecture based on the GTSVM software (http://ttic.uchicago.edu/~cotter/projects/gtsvm/)
 
 ## Intoduction:
 
