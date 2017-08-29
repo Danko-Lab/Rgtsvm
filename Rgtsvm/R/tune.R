@@ -1,3 +1,21 @@
+##
+##	Copyright (C) 2017  Zhong Wang
+##
+##	This program is free software: you can redistribute it and/or modify
+##	it under the terms of the GNU General Public License as published by
+##	the Free Software Foundation, either version 3 of the License, or
+##	(at your option) any later version.
+##
+##	This program is distributed in the hope that it will be useful,
+##	but WITHOUT ANY WARRANTY; without even the implied warranty of
+##	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##	GNU General Public License for more details.
+##
+##	You should have received a copy of the GNU General Public License
+##	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+
 ## Rgtsvm package,  Zhong Wang<zw355@cornell.edu>
 ##
 ## This script is a modification of the tune.R file
@@ -146,20 +164,20 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
                     else
                         lapply(parameters[para.set,,drop = FALSE], unlist)
 
+                model <- NULL;
                 tryCatch(
-                model <- if (useFormula)
-                        do.call(method, c(list(train.x, data = data, subset = train.ind[[sample]]),  pars, list(...) ) )
-                    else
-                        do.call(method, c(list( train.x[train.ind[[sample]],], y = train.y[train.ind[[sample]]]), pars, list(...) ) ),
-                    error=function(e)
-                    {
-                        print(e$message);
-                        model <- NULL;
-                    }
+                   model <- if (useFormula)
+                       do.call(method, c(list(train.x, data = data, subset = train.ind[[sample]]),  pars, list(...) ) )
+                   else
+                       do.call(method, c(list( train.x[train.ind[[sample]],], y = train.y[train.ind[[sample]]]), pars, list(...) ) ),
+                   error=function(e)
+                   {
+                       model <- NULL;
+                       print(e$message);
+                   }
                 );
 
                 if(is.null(model)) next;
-
                 ## predict validation set
                 pred <- predict.func(model,
                                      if (!is.null(validation.x))
@@ -204,7 +222,7 @@ tune <- function(method, train.x, train.y = NULL, data = list(), validation.x = 
         model.errors[para.set] <- tunecontrol$sampling.aggregate(sampling.errors)
         model.variances[para.set] <- tunecontrol$sampling.dispersion(sampling.errors)
 
-        cat("[SVM Tuning] error=", model.errors[para.set], "variance=", model.variances[para.set], "\n");
+        ## cat("[SVM Tuning] error=", model.errors[para.set], "variance=", model.variances[para.set], "\n");
 
     }
 

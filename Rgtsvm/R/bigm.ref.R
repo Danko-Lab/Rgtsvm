@@ -1,3 +1,21 @@
+##
+##	Copyright (C) 2017  Zhong Wang
+##
+##	This program is free software: you can redistribute it and/or modify
+##	it under the terms of the GNU General Public License as published by
+##	the Free Software Foundation, either version 3 of the License, or
+##	(at your option) any later version.
+##
+##	This program is distributed in the hope that it will be useful,
+##	but WITHOUT ANY WARRANTY; without even the implied warranty of
+##	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##	GNU General Public License for more details.
+##
+##	You should have received a copy of the GNU General Public License
+##	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+
 CACHE_SIZE <-  1000*1000*20;
 
 #BigMatrix.refer <- setRefClass("BigMatrix.refer",
@@ -483,7 +501,9 @@ cat("COL:", block.target, "->", block.current, "\n");
                 as.integer(NROW(block.current)),
                 as.integer(block.target),
                 as.integer(NROW(block.target)),
-                NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
+                NAOK = TRUE,
+                #DUP = FALSE,
+                PACKAGE="Rgtsvm");
 
             temp <- cols.current[block.current];
             cols.current[block.current] <- cols.target[block.target];
@@ -499,7 +519,7 @@ cat("COL:", block.target, "->", block.current, "\n");
         cursor <- cursor +1;
     }
 
-    if (any(cols.current != cols.target)) error("stop to move");
+    if (any(cols.current != cols.target)) stop("stop to move");
 
 }
 
@@ -548,7 +568,9 @@ cat("ROW:", block.target, "->", block.current, "\n");
                 as.integer(NROW(block.current)),
                 as.integer(block.target),
                 as.integer(NROW(block.target)),
-                NAOK = TRUE, DUP = FALSE, PACKAGE="Rgtsvm");
+                NAOK = TRUE,
+                #DUP = FALSE,
+                PACKAGE="Rgtsvm");
 
             temp <- rows.current[block.current];
             rows.current[block.current] <- rows.target[block.target];
@@ -564,7 +586,7 @@ cat("ROW:", block.target, "->", block.current, "\n");
         cursor <- cursor +1;
     }
 
-    if (any(row.current != rows.target)) error("stop to move");
+    if (any(rows.current != rows.target)) stop("stop to move");
 
 }
 

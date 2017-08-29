@@ -1,5 +1,6 @@
 /*
 	Copyright (C) 2011  Andrew Cotter
+	Copyright (C) 2017  Zhong Wang
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -305,7 +306,7 @@ private:
 
 	CUDA_FLOAT_DOUBLE m_bias;
 	boost::shared_array< double > m_trainingResponses;
-	boost::shared_array< float > m_trainingAlphas;
+	boost::shared_array< double > m_trainingAlphas;
 
 	unsigned int m_logMaximumClusterSize;
 	unsigned int m_clusters;

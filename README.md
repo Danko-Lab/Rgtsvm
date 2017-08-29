@@ -1,6 +1,6 @@
 # Rgtsvm
 
-The e1071 compatiblility SVM package for GPU architecture based on the GTSVM software (http://ttic.uchicago.edu/~cotter/projects/gtsvm/)
+The e1071 compatibility SVM package for GPU architecture based on the GTSVM software (http://ttic.uchicago.edu/~cotter/projects/gtsvm/)
 
 ## Intoduction:
 
@@ -59,7 +59,8 @@ Rgtsvm implement the following functions on GPU package(GTSVM)
 
 > `load.svmlight`: a function to load SVMlight data file into a sparse matrix
 
-Please check the details in the manual (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-manual.pdf).
+Please check the details in the ***manual*** (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-manual.pdf) or the ***vignette***  (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf).
+
 
 To use Rgtsvm, type: 
 
@@ -107,6 +108,8 @@ R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$B
 
 ```
 
+Please check the ***vignette*** (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf) to see more details.
+
 ### Installation Example
 
 #### Installation instructions on *stampede.tacc.xsede.org*
@@ -127,7 +130,7 @@ module load cuda/6.5
 R CMD INSTALL --configure-args="--with-cuda-home=/usr/local/packages/cuda/6.5 --with-boost-home=/usr/local/packages/boost/1.55.0/INTEL-14.0.2-python-2.7.7-anaconda" Rgtsvm
 ```
 
-## License
+## License (GPLv3)
 
 Copyright(c) 2017 Zhong Wang
 
@@ -137,4 +140,6 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
 
 You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+## How to cite
 
+Wang, Z., Chu, T., Choate, L. A., & Danko, C. G. (2017). [Rgtsvm: Support Vector Machines on a GPU in R.](https://arxiv.org/abs/1706.05544) arXiv preprint arXiv:1706.05544.
