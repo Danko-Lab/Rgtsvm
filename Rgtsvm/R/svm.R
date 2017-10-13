@@ -690,14 +690,16 @@ predict.gtsvm <- function (object, newdata,
     if (decision.values)
     {
         colns = c();
-        for (i in 1:(object$nclasses - 1))
-            for (j in (i + 1):object$nclasses)
-                colns <- c(colns,
-                           paste(object$levels[object$labels[i]],
-                                 "/", object$levels[object$labels[j]],
-                                 sep = ""));
+        #for (i in 1:(object$nclasses - 1))
+        #    for (j in (i + 1):object$nclasses)
+        #        colns <- c(colns,
+        #                   paste(object$levels[object$labels[i]],
+        #                         "/", object$levels[object$labels[j]],
+        #                         sep = ""));
+        colns <- object$labels;
+
         attr(ret2, "decision.values") <-
-            napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = TRUE, dimnames = list(rowns, colns) ) );
+            napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = FALSE, dimnames = list(rowns, colns) ) );
     }
 
     if (probability && object$type < 2)
