@@ -17,8 +17,8 @@ i.all <- 1:(2*size);
 i.training <- sample(i.all, length(i.all)*0.8);
 i.test <- i.all [! i.all %in% i.training];
 
-model.gpu <- svm(x[i.training,],y[i.training],type="C-classification");
-y.pred <-predict( model.gpu, x[i.test,] );
+model.gpu <- svm(x[i.training,],y[i.training],type="C-classification", probability=T);
+y.pred <-predict( model.gpu, x[i.test,] , probability=T);
 cat("accuracy", sum(y.pred == y[i.test])/length(i.test),"\n");
 
 #accuracy=0.8997

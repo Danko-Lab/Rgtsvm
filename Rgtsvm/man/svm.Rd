@@ -72,7 +72,7 @@
   
   \item{fitted}{logical value indicating whether the prediction should be performed and returned in the function calling, default is \code{TRUE}. }
 
-  \item{probability}{logical value indicating whether the model should allow for probability predictions, not supported in \pkg{Rgtsvm}.}
+  \item{probability}{logical value indicating whether the model should allow for probability predictions.}
   
   \item{no.change.x}{logical value indicating whther the function can change the \code{x} parameter. It would save CPU memory if this parameter is assigned to \code{FALSE} for the big matrix \code{x}. }
   
@@ -106,6 +106,12 @@
   \item{scorrcoeff}{the R square in cross-validation for \code{eps-regression} if \code{cross>0}.}
   \item{accuracies}{the accuracies at each cross-validation test for \code{C-classification} if \code{cross>0}.}
   \item{tot.accuracy}{the total accuracies in cross-validation for \code{C-classification} if \code{cross>0}.}
+
+  \item{compprob}{logical values if probability is predicted.}
+  \item{probA}{numerical value indicating (1) the parameter A of the logistic distributions fitted to the decision values of the binary classifiers 
+  (2) the \gamma coefficient of the softmax function for the multi-classification in one-agianst-rest mode. (3) the \zeta parameter of the Laplace distributions for the eps-regression  if \code{probability==TRUE}.}
+  \item{probB}{numerical value indicating the parameter B of the logistic distributions fitted to the decision values of the binary classifiers if \code{probability==TRUE}. }
+  
 }
 
 \details{

@@ -239,7 +239,7 @@ svm.default <- function (x,
           subset,
           na.action = na.omit)
 {
-	if (verbose) cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
+    if (verbose) cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
 
     if ((is.vector(x) && is.atomic(x)))
         x <- t(t(x));
@@ -325,6 +325,8 @@ svm.default <- function (x,
 
     biased <- ifelse(var.info$nclass<=2, TRUE, FALSE);
 
+    if ( probability && !fitted) fitted <- TRUE;
+
     param <- list(type=type, type.name = type.name, kernel=kernel, degree=degree, gamma=gamma,
              coef0=coef0, cost=cost, tolerance=tolerance, epsilon=epsilon,
              shrinking=shrinking, cross=cross, rough.cross=rough.cross,
@@ -357,7 +359,6 @@ svm.default <- function (x,
                  coef0     = coef0,
                  class.weights = class.weights,
 
-                 compprob  = FALSE,
                  tolerance = tolerance,
                  epsilon   = epsilon,
                  sparse    = sparse,
@@ -390,6 +391,11 @@ svm.default <- function (x,
 
                  ## coefficiants of sv
                  coefs    = cret$coefs,
+
+                 ## probability
+                 compprob  = probability,
+                 probA     = NULL,
+                 probB     = NULL,
 
                  totalIter = cret$totalIter,
                  t.elapsed = cret$t.elapsed,
@@ -425,13 +431,32 @@ svm.default <- function (x,
         if(type == C_CLASSFICATION)
         {
             org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
+
+            ret$decision.values <- cret$decision[org.idx]
             ret$fitted <- as.factor(cret$predict[org.idx]);
             levels( ret$fitted ) <- var.info$lev;
-
-            ret$decision.values <- attr( ret$fitted, "decision.values" );
             attr(ret$fitted, "decision.values") <- NULL;
 
             ret$fitted.accuracy <- length( which( ret$fitted == var.info$y.orignal ) )/length(y);
+
+            if(param$nclass==2)
+            {
+                if(probability)
+                {
+                    prob <- svc_binary_train_prob( var.info$y.orignal, ret$decision.values );
+                    ret$probA = prob$A;
+                    ret$probB = prob$B;
+                }
+            }
+            else
+            {
+                if(probability)
+                {
+                    org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
+                    ret$decision.values <- matrix( cret$decision,ncol=cret$nclasses )[org.idx, ];
+                    ret$probA <- svc_one_again_all_train_prob( as.numeric(var.info$y.orignal), ret$decision.values );
+                }
+            }
         }
         else
         {
@@ -451,6 +476,10 @@ svm.default <- function (x,
             ret$fitted.MSE <- sum(( y1 - y1.v )^2, na.rm=T)/length(y1);
             ret$fitted.r2  <- ( length(y1)* sum(y1.v*y1, na.rm=T) - sum(y1.v, na.rm=T)*sum(y1, na.rm=T) )^2 / ( length(y1)*sum(y1.v^2, na.rm=T) - (sum(y1.v, na.rm=T))^2) / ( length(y1)*sum(y1^2, na.rm=T)- (sum(y1, na.rm=T))^2);
             ret$residuals <- (y1 - y1.v);
+
+            if(probability)
+               ret$probA <- eps_train_prob( y1, y1.v );
+
         }
     }
 
@@ -659,7 +688,7 @@ predict.gtsvm <- function (object, newdata,
              newdata[,object$scaled] <-
                 scale( newdata[, object$scaled, drop = FALSE], center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale")
         else
-            bigm.scale( newdata,  object$scaled, center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale" );
+            bigm.scale( newdata, object$scaled, center = object$x.scale$"scaled:center", scale  = object$x.scale$"scaled:scale" );
     }
 
     if (ncol(object$SV) != ncol(newdata))
@@ -696,20 +725,34 @@ predict.gtsvm <- function (object, newdata,
         #                   paste(object$levels[object$labels[i]],
         #                         "/", object$levels[object$labels[j]],
         #                         sep = ""));
-        colns <- object$labels;
 
-        attr(ret2, "decision.values") <-
-            napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = FALSE, dimnames = list(rowns, colns) ) );
+        if(object$nclasses==2)
+            attr(ret2, "decision.values") <- napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=1 ) )
+        else
+        {
+            colns <- object$labels;
+            attr(ret2, "decision.values") <-
+                napredict(act, matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = FALSE, dimnames = list(rowns, colns) ) );
+        }
+
     }
 
-    if (probability && object$type < 2)
-    {
+    if (probability && object$type < 2) {
         if (!object$compprob)
             warning("SVM has not been trained using `probability = TRUE`, probabilities not available for predictions.")
         else
-            attr(ret2, "probabilities") <-
-                napredict(act, matrix(ret$prob, nrow = nrow(newdata), byrow = TRUE,
-                                       dimnames = list(rowns, object$levels[object$labels]) ) );
+        {
+            if(object$nclasses==2)
+                attr(ret2, "probabilities") <- napredict(act, svc_binary_predict_prob( ret$dec, object$probA, object$probB ) )
+            else
+            {
+                colns <- object$labels;
+                ydeci <- matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = FALSE, dimnames = list(rowns, colns) );
+                ret$prob <- svc_one_again_all_predict_prob( ydeci, object$probA );
+                colnames(ret$prob) <- object$labels;
+                attr(ret2, "probabilities") <- napredict(act,ret$prob );
+             }
+        }
     }
 
     if( inherits(newdata, "BigMatrix.refer") ) bigm.pop(newdata);
@@ -916,9 +959,19 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
         if (!object$compprob)
             warning("SVM has not been trained using `probability = TRUE`, probabilities not available for predictions.")
         else
-            attr(ret2, "probabilities") <-
-                napredict(act, matrix(ret$prob, nrow = x.count, byrow = TRUE,
-                                       dimnames = list(rowns, object$levels[object$labels]) ) );
+        {
+
+            if(object$nclasses==2)
+                attr(ret2, "probabilities") <- napredict(act, svc_binary_predict_prob( ret$dec, object$probA, object$probB ) )
+            else
+            {
+                colns <- object$labels;
+                ydeci <- matrix(ret$dec, nrow = nrow(newdata), ncol=length(colns), byrow = FALSE, dimnames = list(rowns, colns) );
+                ret$prob <- svc_one_again_all_predict_prob( ydeci, object$probA );
+                colnames(ret$prob) <- object$labels;
+                attr(ret2, "probabilities") <- napredict(act,ret$prob );
+             }
+        }
     }
 
     ret2
