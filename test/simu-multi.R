@@ -26,8 +26,8 @@ training.idx<-sample(all.idx, length(all.idx)*0.8)
 test.idx<-all.idx[! all.idx %in% training.idx]
 
 
-model.gpu<-svm(x[training.idx,],y[training.idx],type="C-classification")
-predicted.y<-predict(model.gpu,x[test.idx,])
+model.gpu<-svm(x[training.idx,],y[training.idx],type="C-classification", probability=TRUE)
+predicted.y<-predict(model.gpu,x[test.idx,], probability=TRUE)
 cat("accuracy", sum(predicted.y==y[test.idx])/length(test.idx),"\n")
 
 

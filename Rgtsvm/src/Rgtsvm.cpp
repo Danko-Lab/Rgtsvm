@@ -84,11 +84,11 @@ extern "C" void gtsvmtrain_epsregression (
 		   int	*pSparse,
 		   double *pX,
 		   int	*pVecOffset,// start from 0
-		   int 	  *pVecIndex, // start from 1
+		   int 	*pVecIndex, // start from 1
 		   int	*pXrow,
-		   int 	  *pXcol,
+		   int 	*pXcol,
 		   int	*pXInnerRow,
-		   int 	  *pXInnerCol,
+		   int 	*pXInnerCol,
 		   int	*pXRowIndex,
 		   int	*pXColIndex,
 		   double *pY,
@@ -776,9 +776,9 @@ extern "C" void gtsvmtrain_classfication (
 		   int	*pSparse,
 		   double *pX,
 		   int	*pVecOffset,// start from 0
-		   int 	  *pVecIndex, // start from 1
+		   int 	*pVecIndex, // start from 1
 		   int	*pXrow,
-		   int 	  *pXcol,
+		   int 	*pXcol,
 		   int	*pXInnerRow,
 		   int	*pXInnerCol,
 		   int	*pXRowIndex,
@@ -859,7 +859,7 @@ extern "C" void gtsvmtrain_classfication (
 	}
 
 	if(*pVerbose) Rprintf("[C-SVC training] X=%d[%d,%d] nclasses=%d biased=%d kernel=%d degree=%f gamma=%f, c0=%f C=%f tolerance=%f\n",
-			*pSparse, *pXrow, *pXcol, nclasses, *pBiased, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization, *pTolerance );
+		*pSparse, *pXrow, *pXcol, nclasses, *pBiased, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization, *pTolerance );
 
 	_TRY_EXCEPTIONS_
 
@@ -1082,10 +1082,13 @@ extern "C" void gtsvmtrain_classfication (
 		if(!multiclass)
 		{
 			for ( unsigned int ii = 0; ii < (unsigned)(*pXrow); ++ii )
+			{
+				pDecision[ ii ] = result[ ii ];
 				if( result[ ii ] < 0)
 					pPredict[ ii ]= -1;
 				else
 					pPredict[ ii ] = 1;
+			}
 		}
 		else
 		{
@@ -1096,16 +1099,20 @@ extern "C" void gtsvmtrain_classfication (
 
 				if(resultColumnMajor)
 				{
+					pDecision[ ii ] = result[ ii ];
 					for ( unsigned int jj = 1; jj < nCol; ++jj )
 					{
+						pDecision[ ii + jj*(*pXrow) ] = result[ ii + jj*(*pXrow) ];
 						if(	result[ ii + jj*(*pXrow) ] > result[ ii + n_idx*(*pXrow) ] )
 							n_idx = jj;
 					}
 				}
 				else
 				{
+					pDecision[ ii ] = result[ ii*nCol + 0 ];
 					for ( unsigned int jj = 1; jj < nCol; ++jj )
 					{
+						pDecision[ ii + jj*(*pXrow) ] = result[ ii*nCol + jj ];
 						if(	result[ ii*nCol + jj ] > result[ ii*nCol + n_idx ] )
 							n_idx = jj;
 					}
