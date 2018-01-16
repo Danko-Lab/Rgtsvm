@@ -27,34 +27,7 @@
 #include <Rembedded.h>
 #include <Rdefines.h>
 #include <R_ext/Parse.h>
-
-#define  DEF_BIASED true
-#define  DEF_COLUMN_MAJOR true
-#define  DEF_SMALL_CLUSTERS false
-#define  DEF_ACTIVE_CLUSTERS 64
-
-#define _TRY_EXCEPTIONS_ \
-	try {
-
-
-#define _CATCH_EXCEPTIONS_  \
-	}  \
-	catch( std::exception& error ) {  \
-		g_error = true;  \
-		g_errorString = error.what();  \
-	}  \
-	catch( ... ) {  \
-		g_error = true;  \
-		g_errorString = "Unknown error";  \
-	}
-
-#define _CHECK_EXCEPTIONS_ \
-	if(g_error) \
-	{ \
-		*pnError = 1; \
-		Rprintf("Error: %s", g_errorString.c_str()); \
-		return; \
-	}
+#include "Rgtsvm.hpp"
 
 
 SEXP run_script(char* szCmd)
@@ -80,11 +53,11 @@ SEXP run_script(char* szCmd)
 }
 
 
-extern "C" void gtsvmtrain_epsregression (
+extern "C" void gtsvmtrain_epsregression_C (
 		   int	*pSparse,
 		   double *pX,
-		   int	*pVecOffset,// start from 0
-		   int 	*pVecIndex, // start from 1
+		   int64_t	*pVecOffset,// start from 0
+		   int64_t 	*pVecIndex, // start from 1
 		   int	*pXrow,
 		   int 	*pXcol,
 		   int	*pXInnerRow,
@@ -372,221 +345,15 @@ extern "C" void gtsvmtrain_epsregression (
 
 }
 
-extern "C" void gtsvmpredict_epsregression_batch  (
+
+extern "C" void gtsvmpredict_epsregression_C  (
 		  int	*pDecisionvalues,
 		  int	*pProbability,
 
 		  int	*pModelSparse,
 		  double *pModelX,
-		  int	*pModelVecOffset,
-		  int	*pModelVecIndex,
-		  int	*pModelRow,
-		  int 	 *pModelCol,
-		  int	*pModelRowIndex,
-		  int	*pModelColIndex,
-		  int	*pTotnSV,
-
-		  double *pModelRho,
-		  double *pModelAlphas,
-
-		  int	*pKernelType,
-		  int	*pDegree,
-		  double *pGamma,
-		  double *pCoef0,
-		  double *pCost,
-		  double *pScaledCenter,
-		  double *pScaledScale,
-
-		  char   **pszRDSfile,
-		  int	*pLenRDSfile,
-
-		  double *pRet,
-		  double *pDec,
-		  double *pProb,
-		  int	*pVerbose,
-		  int	*pnError)
-{
-	GTSVM::SVM svm;
-	GTSVM::SVM* psvm = &svm;
-	bool g_error = false;
-	std::string g_errorString;
-
-	bool biased = DEF_BIASED;
-	bool columnMajor = DEF_COLUMN_MAJOR;
-	bool smallClusters = DEF_SMALL_CLUSTERS;
-	int  activeClusters = DEF_ACTIVE_CLUSTERS;
-
-	float regularization = *pCost;
-	float kernelParameter1 = *pGamma;
-	float kernelParameter2 = *pCoef0;
-	float kernelParameter3 = *pDegree;
-	if ( *pKernelType == 0 )
-	{
-		*pKernelType = GTSVM_KERNEL_POLYNOMIAL;
-		kernelParameter1 = 1;
-		kernelParameter3 = 1;
-	}
-
-	*pnError = 0;
-
-	if (*pVerbose) Rprintf("[e-SVR batch#] X=[?,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
-			 *pModelCol, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
-
-	_TRY_EXCEPTIONS_
-
-	// c(-1,0,1) + 1 ==> c(0, 1,2)
-	boost::shared_array< float > regularizationWeights( new float[ 3 ] );
-	std::fill( regularizationWeights.get(), regularizationWeights.get() + 3, 1.0f );
-
-	boost::shared_array< double > pLabelY( new double[ *pModelRow ] );
-	boost::shared_array< float > pLinearTerm( new float[ *pModelRow ] );
-	for(int i=0;i<(*pModelRow); i++)
-	{
-		pLabelY[ i ] = 1.0;
-		pLinearTerm[ i ] = 1.0;
-	}
-
-	if (*pModelSparse > 0)
-		psvm->InitializeSparse(
-			(void*)pModelX,
-			(size_t*)pModelVecIndex,
-			(size_t*)pModelVecOffset,
-			GTSVM_TYPE_DOUBLE,
-			(void*)NULL,
-			GTSVM_TYPE_DOUBLE,
-			(void*)pLinearTerm.get(),
-			GTSVM_TYPE_FLOAT,
-			(unsigned int)*pModelRow,
-			(unsigned int)*pModelCol,
-			false,
-			false,
-			regularization,
-			regularizationWeights.get(),
-			2,
-			static_cast< GTSVM_Kernel >(*pKernelType),
-			kernelParameter1,
-			kernelParameter2,
-			kernelParameter3,
-			biased,
-			smallClusters,
-			activeClusters,
-			false);
-	else
-		psvm->InitializeDense(
-			(void*)pModelX,
-			GTSVM_TYPE_DOUBLE,
-			(unsigned int)*pModelRow,
-			(unsigned int)*pModelCol,
-			(unsigned int)*pModelRow,
-			(unsigned int)*pModelCol,
-			(unsigned int*)pModelRowIndex,
-			(unsigned int*)pModelColIndex,
-			(void*)NULL,
-			GTSVM_TYPE_DOUBLE,
-			(void*)pLinearTerm.get(),
-			GTSVM_TYPE_FLOAT,
-			columnMajor,
-			false,
-			regularization,
-			regularizationWeights.get(),
-			2,
-			static_cast< GTSVM_Kernel >(*pKernelType),
-			(float)kernelParameter1,
-			(float)kernelParameter2,
-			(float)kernelParameter3,
-			biased,
-			smallClusters,
-			activeClusters,
-			false);
-
-
-	_CATCH_EXCEPTIONS_
-	_CHECK_EXCEPTIONS_
-
-	if(*pVerbose) Rprintf("[e-SVR batch#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
-
-	_TRY_EXCEPTIONS_
-
-	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
-	psvm->SetBias(  -1*(*pModelRho) );
-	psvm->ClusterTrainingVectors( smallClusters, activeClusters );
-
-
-	_CATCH_EXCEPTIONS_
-	_CHECK_EXCEPTIONS_
-
-	int nOffsetret = 0;
-	for (int k=0; k< *pLenRDSfile; k++)
-	{
-		_TRY_EXCEPTIONS_
-
-		char szCmd[1024]={0};
-		sprintf( szCmd, "readRDS('%s')", pszRDSfile[k] );
-
-		if(*pVerbose) Rprintf("			   Loading %s\n", pszRDSfile[k] );
-
-		SEXP pNewData = run_script( szCmd );
-
-		SEXP dims = getAttrib(pNewData, R_DimSymbol);
-		int nRow=0, nCol=0;
-
-		if (length(dims) == 2)
-		{
-			nRow = INTEGER(dims)[0];
-			nCol = INTEGER(dims)[1];
-		}
-		else if(length(dims) == 1)
-		{
-			nRow = 1;
-			nCol = INTEGER(dims)[0];
-		}
-		else
-			return;
-
-		boost::shared_array< double > result( new double[ nRow] );
-		boost::shared_array< unsigned int > pXRowIndex( new unsigned int[ nRow ] );
-		boost::shared_array< unsigned int > pXColIndex( new unsigned int[ nCol ] );
-
-		for(int i=0; i<nRow; i++) pXRowIndex[i] = i;
-		for(int i=0; i<nCol; i++) pXColIndex[i] = i;
-
-		psvm->ClassifyDense(
-				(void*)result.get(),
-				GTSVM_TYPE_DOUBLE,
-				(void*)REAL( pNewData ),
-				GTSVM_TYPE_DOUBLE,
-				(unsigned)nRow,
-				(unsigned)*pModelCol,
-				(unsigned int)nRow,
-				(unsigned int)nCol,
-				(unsigned int*)pXRowIndex.get(),
-				(unsigned int*)pXColIndex.get(),
-				columnMajor);
-
-		for ( unsigned int ii = 0; ii < (unsigned int)nRow; ++ii )
-		{
-			pDec[ ii + nOffsetret] = result[ ii ];
-			pRet[ ii + nOffsetret] = result[ ii ];
-		}
-
-		nOffsetret = nOffsetret + nRow;
-
-		_CATCH_EXCEPTIONS_
-		_CHECK_EXCEPTIONS_
-	}
-
-	if(*pVerbose) Rprintf("[e-SVR batch#] DONE!\n");
-}
-
-
-extern "C" void gtsvmpredict_epsregression  (
-		  int	*pDecisionvalues,
-		  int	*pProbability,
-
-		  int	*pModelSparse,
-		  double *pModelX,
-		  int	*pModelVecOffset,
-		  int	*pModelVecIndex,
+		  int64_t	*pModelVecOffset,
+		  int64_t	*pModelVecIndex,
 		  int	*pModelRow,
 		  int 	 *pModelCol,
 		  int	*pModelRowIndex,
@@ -604,8 +371,8 @@ extern "C" void gtsvmpredict_epsregression  (
 
 		  int	*pSparseX,
 		  double *pX,
-		  int	*pXVecOffset,
-		  int	*pXVecIndex,
+		  int64_t	*pXVecOffset,
+		  int64_t	*pXVecIndex,
 		  int 	 *pXrow,
 		  int 	 *pXInnerRow,
 		  int 	 *pXInnerCol,
@@ -772,11 +539,11 @@ extern "C" void gtsvmpredict_epsregression  (
 	if(*pVerbose) Rprintf("[e-SVR predict#] DONE!\n");
 }
 
-extern "C" void gtsvmtrain_classfication (
+extern "C" void gtsvmtrain_classfication_C (
 		   int	*pSparse,
 		   double *pX,
-		   int	*pVecOffset,// start from 0
-		   int 	*pVecIndex, // start from 1
+		   int64_t	*pVecOffset,// start from 0
+		   int64_t 	*pVecIndex, // start from 1
 		   int	*pXrow,
 		   int 	*pXcol,
 		   int	*pXInnerRow,
@@ -1131,13 +898,13 @@ extern "C" void gtsvmtrain_classfication (
 
 }
 
-extern "C" void gtsvmpredict_classfication  (
+extern "C" void gtsvmpredict_classfication_C  (
 		  int	*pDecisionvalues,
 		  int	*pProbability,
 		  int	*pModelSparse,
 		  double *pModelX,
-		  int	*pModelVecOffset,
-		  int	*pModelVecIndex,
+		  int64_t	*pModelVecOffset,
+		  int64_t	*pModelVecIndex,
 		  int	*pModelRow,
 		  int 	 *pModelCol,
 		  int	*pModelRowIndex,
@@ -1156,8 +923,8 @@ extern "C" void gtsvmpredict_classfication  (
 
 		  int	*pSparseX,
 		  double *pX,
-		  int	*pXVecOffset,
-		  int	*pXVecIndex,
+		  int64_t	*pXVecOffset,
+		  int64_t	*pXVecIndex,
 		  int 	 *pXrow,
 		  int	*pXInnerRow,
 		  int	*pXInnerCol,
@@ -1353,8 +1120,8 @@ extern "C" void gtsvmpredict_classfication_batch  (
 
 		  int	*pModelSparse,
 		  double *pModelX,
-		  int	*pModelVecOffset,
-		  int	*pModelVecIndex,
+		  int64_t	*pModelVecOffset,
+		  int64_t	*pModelVecIndex,
 		  int	*pModelRow,
 		  int 	 *pModelCol,
 		  int	*pModelRowIndex,
@@ -1578,4 +1345,211 @@ extern "C" void gtsvmpredict_classfication_batch  (
 
 	if(*pVerbose) Rprintf("[C-SVC batch#] DONE!\n");
 }
+
+extern "C" void gtsvmpredict_epsregression_batch  (
+		  int	*pDecisionvalues,
+		  int	*pProbability,
+
+		  int	*pModelSparse,
+		  double *pModelX,
+		  int64_t	*pModelVecOffset,
+		  int64_t	*pModelVecIndex,
+		  int	*pModelRow,
+		  int 	 *pModelCol,
+		  int	*pModelRowIndex,
+		  int	*pModelColIndex,
+		  int	*pTotnSV,
+
+		  double *pModelRho,
+		  double *pModelAlphas,
+
+		  int	*pKernelType,
+		  int	*pDegree,
+		  double *pGamma,
+		  double *pCoef0,
+		  double *pCost,
+		  double *pScaledCenter,
+		  double *pScaledScale,
+
+		  char   **pszRDSfile,
+		  int	*pLenRDSfile,
+
+		  double *pRet,
+		  double *pDec,
+		  double *pProb,
+		  int	*pVerbose,
+		  int	*pnError)
+{
+	GTSVM::SVM svm;
+	GTSVM::SVM* psvm = &svm;
+	bool g_error = false;
+	std::string g_errorString;
+
+	bool biased = DEF_BIASED;
+	bool columnMajor = DEF_COLUMN_MAJOR;
+	bool smallClusters = DEF_SMALL_CLUSTERS;
+	int  activeClusters = DEF_ACTIVE_CLUSTERS;
+
+	float regularization = *pCost;
+	float kernelParameter1 = *pGamma;
+	float kernelParameter2 = *pCoef0;
+	float kernelParameter3 = *pDegree;
+	if ( *pKernelType == 0 )
+	{
+		*pKernelType = GTSVM_KERNEL_POLYNOMIAL;
+		kernelParameter1 = 1;
+		kernelParameter3 = 1;
+	}
+
+	*pnError = 0;
+
+	if (*pVerbose) Rprintf("[e-SVR batch#] X=[?,%d] kernel=%d degree=%f gamma=%f, c0=%f C=%f\n",
+			 *pModelCol, *pKernelType, kernelParameter3, kernelParameter1, kernelParameter2, regularization );
+
+	_TRY_EXCEPTIONS_
+
+	// c(-1,0,1) + 1 ==> c(0, 1,2)
+	boost::shared_array< float > regularizationWeights( new float[ 3 ] );
+	std::fill( regularizationWeights.get(), regularizationWeights.get() + 3, 1.0f );
+
+	boost::shared_array< double > pLabelY( new double[ *pModelRow ] );
+	boost::shared_array< float > pLinearTerm( new float[ *pModelRow ] );
+	for(int i=0;i<(*pModelRow); i++)
+	{
+		pLabelY[ i ] = 1.0;
+		pLinearTerm[ i ] = 1.0;
+	}
+
+	if (*pModelSparse > 0)
+		psvm->InitializeSparse(
+			(void*)pModelX,
+			(size_t*)pModelVecIndex,
+			(size_t*)pModelVecOffset,
+			GTSVM_TYPE_DOUBLE,
+			(void*)NULL,
+			GTSVM_TYPE_DOUBLE,
+			(void*)pLinearTerm.get(),
+			GTSVM_TYPE_FLOAT,
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			false,
+			false,
+			regularization,
+			regularizationWeights.get(),
+			2,
+			static_cast< GTSVM_Kernel >(*pKernelType),
+			kernelParameter1,
+			kernelParameter2,
+			kernelParameter3,
+			biased,
+			smallClusters,
+			activeClusters,
+			false);
+	else
+		psvm->InitializeDense(
+			(void*)pModelX,
+			GTSVM_TYPE_DOUBLE,
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			(unsigned int)*pModelRow,
+			(unsigned int)*pModelCol,
+			(unsigned int*)pModelRowIndex,
+			(unsigned int*)pModelColIndex,
+			(void*)NULL,
+			GTSVM_TYPE_DOUBLE,
+			(void*)pLinearTerm.get(),
+			GTSVM_TYPE_FLOAT,
+			columnMajor,
+			false,
+			regularization,
+			regularizationWeights.get(),
+			2,
+			static_cast< GTSVM_Kernel >(*pKernelType),
+			(float)kernelParameter1,
+			(float)kernelParameter2,
+			(float)kernelParameter3,
+			biased,
+			smallClusters,
+			activeClusters,
+			false);
+
+
+	_CATCH_EXCEPTIONS_
+	_CHECK_EXCEPTIONS_
+
+	if(*pVerbose) Rprintf("[e-SVR batch#] Model=%d[%d,%d] rho=%f\n", *pModelSparse, *pModelRow, *pModelCol, *pModelRho );
+
+	_TRY_EXCEPTIONS_
+
+	psvm->SetAlphas( (void*)pModelAlphas, GTSVM_TYPE_DOUBLE, columnMajor );
+	psvm->SetBias(  -1*(*pModelRho) );
+	psvm->ClusterTrainingVectors( smallClusters, activeClusters );
+
+
+	_CATCH_EXCEPTIONS_
+	_CHECK_EXCEPTIONS_
+
+	int nOffsetret = 0;
+	for (int k=0; k< *pLenRDSfile; k++)
+	{
+		_TRY_EXCEPTIONS_
+
+		char szCmd[1024]={0};
+		sprintf( szCmd, "readRDS('%s')", pszRDSfile[k] );
+
+		if(*pVerbose) Rprintf("			   Loading %s\n", pszRDSfile[k] );
+
+		SEXP pNewData = run_script( szCmd );
+
+		SEXP dims = getAttrib(pNewData, R_DimSymbol);
+		int nRow=0, nCol=0;
+
+		if (length(dims) == 2)
+		{
+			nRow = INTEGER(dims)[0];
+			nCol = INTEGER(dims)[1];
+		}
+		else if(length(dims) == 1)
+		{
+			nRow = 1;
+			nCol = INTEGER(dims)[0];
+		}
+		else
+			return;
+
+		boost::shared_array< double > result( new double[ nRow] );
+		boost::shared_array< unsigned int > pXRowIndex( new unsigned int[ nRow ] );
+		boost::shared_array< unsigned int > pXColIndex( new unsigned int[ nCol ] );
+
+		for(int i=0; i<nRow; i++) pXRowIndex[i] = i;
+		for(int i=0; i<nCol; i++) pXColIndex[i] = i;
+
+		psvm->ClassifyDense(
+				(void*)result.get(),
+				GTSVM_TYPE_DOUBLE,
+				(void*)REAL( pNewData ),
+				GTSVM_TYPE_DOUBLE,
+				(unsigned)nRow,
+				(unsigned)*pModelCol,
+				(unsigned int)nRow,
+				(unsigned int)nCol,
+				(unsigned int*)pXRowIndex.get(),
+				(unsigned int*)pXColIndex.get(),
+				columnMajor);
+
+		for ( unsigned int ii = 0; ii < (unsigned int)nRow; ++ii )
+		{
+			pDec[ ii + nOffsetret] = result[ ii ];
+			pRet[ ii + nOffsetret] = result[ ii ];
+		}
+
+		nOffsetret = nOffsetret + nRow;
+
+		_CATCH_EXCEPTIONS_
+		_CHECK_EXCEPTIONS_
+	}
+
+	if(*pVerbose) Rprintf("[e-SVR batch#] DONE!\n");
+}
+
 

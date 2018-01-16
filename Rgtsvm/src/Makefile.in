@@ -30,6 +30,7 @@ TARGET := Rgtsvm.so
 OBJS := Rgtsvm.o
 
 HEADERS := \
+	Rgtsvm.hpp \
 	svm.hpp \
 	cuda.hpp \
 	cuda_sparse_kernel.hpp \
@@ -42,7 +43,9 @@ HEADERS := \
 	helpers.hpp
 
 SOURCES := \
+	Rgtsvm_RI.c \
 	Rgtsvm.cpp \
+	Rgtsvm2.cpp \
 	svmlight.cpp \
 	svm.cpp \
 	cuda_sparse_kernel.cu \

@@ -432,7 +432,11 @@ svm.default <- function (x,
         {
             org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
 
-            ret$decision.values <- cret$decision[org.idx]
+            if(param$nclass==2)
+	            ret$decision.values <- cret$decision[org.idx]
+			else
+				ret$decision.values <- matrix( cret$decision,ncol=cret$nclasses )[org.idx, ];
+
             ret$fitted <- as.factor(cret$predict[org.idx]);
             levels( ret$fitted ) <- var.info$lev;
             attr(ret$fitted, "decision.values") <- NULL;
@@ -453,7 +457,6 @@ svm.default <- function (x,
                 if(probability)
                 {
                     org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
-                    ret$decision.values <- matrix( cret$decision,ncol=cret$nclasses )[org.idx, ];
                     ret$probA <- svc_one_again_all_train_prob( as.numeric(var.info$y.orignal), ret$decision.values );
                 }
             }
@@ -975,4 +978,85 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
     }
 
     ret2
+}
+
+predict.load <- function (object, verbose=FALSE )
+{
+    if( class (object) != "gtsvm")
+      stop("Model type is not 'gtsvm'!");
+
+    if (object$tot.nSV < 1)
+      stop("Model is empty!");
+
+    if(inherits(object$SV, "Matrix"))
+    {
+        requireNamespace("SparseM");
+        requireNamespace("Matrix");
+    }
+
+    if(inherits(object$SV, "simple_triplet_matrix"))
+    {
+       requireNamespace("SparseM");
+    }
+
+    sparse <- inherits(object$SV, "matrix.csr");
+    if (object$sparse || sparse)
+        requireNamespace("SparseM");
+
+    # Call C/C++ interface to do predict
+    if(object$type == C_CLASSFICATION)
+        ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+    else if(object$type == EPSILON_SVR)
+        ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+    else
+        stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+
+	model <- object;
+	model$pointer <- ret$pointer;
+
+	## In order to save memory, relase some 'big' data member;
+	if(NROW(model$SV)>3) model$SV <- model$SV[1:3,];
+
+	model$index <- NULL;
+	model$coefs <- NULL;
+	model$fitted <- NULL;
+	model$residuals <- NULL;
+
+	return(model);
+}
+
+predict.run <- function (object, newdata,
+          decision.values = FALSE,
+          probability = FALSE,
+          verbose = FALSE,
+          ...,
+          na.action = na.omit)
+{
+    if( class (object) != "gtsvm")
+      stop("Model type is not 'gtsvm'!");
+
+    if (is.null(object$pointer) )
+      stop("Model is not loaded in GPU node, use 'predict.load' firstly.!");
+
+	ret <- predict.gtsvm(object, newdata,
+          decision.values = decision.values,
+          probability = probability,
+          verbose = verbose,
+          ...,
+          na.action = na.omit);
+
+    ret;
+}
+
+predict.unload <- function (object )
+{
+    if ( class (object) != "gtsvm")
+      stop("Model type is not 'gtsvm'!");
+
+    if (is.null(object$pointer) )
+      stop("Model is not loaded in GPU node, use 'predict.load' firstly.!");
+
+    ret <- gtsvmpredict.unloadsvm( object);
+
+    invisible(ret$error);
 }
