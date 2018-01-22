@@ -55,7 +55,7 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
     if(is.null(param$class.weights))
         param$class.weights <- rep(1, param$nclass);
 
-    cret <- .C ("gtsvmtrain_classfication",
+    cret <- .Call( "gtsvmtrain_classfication",
                 ## data
                 as.integer (param$sparse),
                 as.double  (if (param$sparse) x@ra else x),
@@ -92,26 +92,28 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
                 as.integer (NROW(x)*100),
                 as.integer (ignoreNoProgress),
 
-                ## results
-                totalIter= integer  (1),
-                ## the total number of classes
-                nclasses = integer  (1),
-                ## nr of support vectors
-                nr       = integer  (1),
-                ## the index of support vectors
-                index    = integer  (nr),
-                ## the labels of classes
-                labels   = integer  (param$nclass),
-                ## the support vectors of each classes
-                nSV      = integer  (param$nclass),
-                rho      = double   (param$nclass * (param$nclass - 1) / 2),
-                coefs    = double   (nr * param$nclass ),
-                predict  = double   (NROW(y)),
-                decision = double   (NROW(y)*param$nclass),
+## #This part will be returned in SEXP object.
+##                ## results
+##                totalIter= integer  (1),
+##                ## the total number of classes
+##                nclasses = integer  (1),
+##                ## nr of support vectors
+##                nr       = integer  (1),
+##                ## the index of support vectors
+##                index    = integer  (nr),
+##                ## the labels of classes
+##                labels   = integer  (param$nclass),
+##                ## the support vectors of each classes
+##                nSV      = integer  (param$nclass),
+##                rho      = double   (param$nclass * (param$nclass - 1) / 2),
+##                coefs    = double   (nr * param$nclass ),
+##                predict  = double   (NROW(y)),
+##                decision = double   (NROW(y)*param$nclass),
+##                error    = as.integer(1),
+## (End)
 
+                as.integer(param$nclass),
                 as.integer(verbose),
-                error    = as.integer(1),
-                #DUP      = FALSE,
                 PACKAGE  = "Rgtsvm");
 
     t.elapsed <- proc.time() - ptm;
@@ -180,7 +182,8 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
         stop ("test data does not match model !")
 
     ptm <- proc.time();
-    cret <- .C ("gtsvmpredict_classfication",
+    if( is.null(obj.train$pointer ) )
+	    cret <- .Call ("gtsvmpredict_classfication",
                as.integer (param$decision.values),
                as.integer (param$probability),
 
@@ -217,15 +220,38 @@ gtsvmpredict.classfication.call<-function( x, x.sparse, obj.train, param=list(de
                as.integer (if ( inherits(x, "BigMatrix.refer") ) bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
                as.integer (if ( inherits(x, "BigMatrix.refer") ) bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
 
-               ## decision-values
-               ret = double( NROW(x) ),
-               dec = double( NROW(x) * obj.train$nclasses ),
-               prob = double( NROW(x) * obj.train$nclasses ),
+## #This part will be returned in SEXP object.
+##               ## decision-values
+##               ret = double( NROW(x) ),
+##               dec = double( NROW(x) * obj.train$nclasses ),
+##               prob = double( NROW(x) * obj.train$nclasses ),
+##               error = as.integer(1),
+## (End)
 
                as.integer(verbose),
-               error = as.integer(1),
-               #DUP      = FALSE,
+               PACKAGE = "Rgtsvm")
+	else
+	    cret <- .Call ("gtsvmpredict_classfication_direct",
+               as.integer (param$decision.values),
+               as.integer (param$probability),
+
+               ## model
+               obj.train$pointer,
+
+               ## test matrix
+               as.integer (x.sparse),
+               as.double  (if (x.sparse) x@ra else x ),
+               as.integer64 (if (x.sparse) x@ia-1 else 0),
+               as.integer64 (if (x.sparse) x@ja-1 else 0),
+               as.integer (NROW(x)),
+               as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)),
+               as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.ncol( x ) else NCOL(x)),
+               as.integer (if ( inherits(x, "BigMatrix.refer") ) bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
+               as.integer (if ( inherits(x, "BigMatrix.refer") ) bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
+
+               as.integer(verbose),
                PACKAGE = "Rgtsvm");
+
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
 
@@ -256,11 +282,11 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=F
 
      ptm <- proc.time();
 
-     cret <- .C ("gtsvmtrain_epsregression",
-                   ## X data
+     cret <- .Call ("gtsvmtrain_epsregression",
+                ## X data
                 as.integer (param$sparse),
                 as.double  (if (param$sparse) x@ra else x),
-                   ## sparse index info
+                ## sparse index info
                 as.integer64 (if (param$sparse) (x@ia)-1 else 0), #offset values start from 0
                 as.integer64 (if (param$sparse) (x@ja)-1 else 0), #index values start from 1
                 as.integer (NROW(x)),
@@ -290,25 +316,25 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=F
                 as.integer (maxIter),
                 as.integer (ignoreNoProgress),
 
-                ## results
-                totalIter= integer  (1),
-                ## nr of support vectors
-                nr       = integer  (1),
-                ## the index of support vectors
-                index    = integer  (nr),
-                ## the labels of classes
-                labels   = integer  (param$nclass),
-                ## the support vectors of each classes
-                nSV      = integer  (param$nclass),
-                rho      = double   (1),
-                ## alpha values
-                coefs    = double(nr),
-                ## prdict labels for the fitted option
-                predict  = double   (nr),
-
+## #This part will be returned in SEXP object.
+##                ## results
+##                totalIter= integer  (1),
+##                ## nr of support vectors
+##                nr       = integer  (1),
+##                ## the index of support vectors
+##                index    = integer  (nr),
+##                ## the labels of classes
+##                labels   = integer  (param$nclass),
+##                ## the support vectors of each classes
+##                nSV      = integer  (param$nclass),
+##                rho      = double   (1),
+##                ## alpha values
+##                coefs    = double(nr),
+##                ## prdict labels for the fitted option
+##                predict  = double   (nr),
+##                error = as.integer(1),
+## (End)
                 as.integer(verbose),
-                error = as.integer(1),
-                #DUP      = FALSE,
                 PACKAGE  = "Rgtsvm");
 
     t.elapsed <- proc.time() - ptm;
@@ -368,13 +394,14 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
 
     ptm <- proc.time();
 
-    cret <- .C ("gtsvmpredict_epsregression",
+   if( is.null(obj.train$pointer ) )
+	    cret <- .Call ("gtsvmpredict_epsregression",
                    as.integer (param$decision.values),
                    as.integer (param$probability),
 
                    ## model
                    as.integer (obj.train$sparse),
-                   as.double  (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
+                   as.double (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
                    as.integer64 (if (obj.train$sparse) obj.train$SV@ia-1 else 0),
                    as.integer64 (if (obj.train$sparse) obj.train$SV@ja-1 else 0),
                    as.integer (NROW(obj.train$SV)),
@@ -405,15 +432,37 @@ gtsvmpredict.regression.call<-function( x, x.sparse, obj.train, param=list(decis
                    as.integer (if ( class(x)=="BigMatrix.refer") bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
                    as.integer (if ( class(x)=="BigMatrix.refer") bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
 
-                   ## decision-values
-                   ret = double( nrow(x) ),
-                   dec = double( nrow(x)  ),
-                   prob = double( nrow(x) * obj.train$nclasses ),
+## #This part will be returned in SEXP object.
+##                   ## decision-values
+##                   ret = double( nrow(x) ),
+##                   dec = double( nrow(x)  ),
+##                   prob = double( nrow(x) * obj.train$nclasses ),
+##                   error = as.integer(1),
+## (End)
+                   as.integer(verbose),
+                   PACKAGE = "Rgtsvm")
+    else
+	    cret <- .Call ("gtsvmpredict_epsregression_direct",
+                   as.integer (param$decision.values),
+                   as.integer (param$probability),
+
+                   ## model
+                   obj.train$pointer,
+
+                   ## test matrix
+                   as.integer (x.sparse),
+                   as.double  (if (x.sparse) x@ra else x ),
+                   as.integer64 (if (x.sparse) x@ia-1 else 0),
+                   as.integer64 (if (x.sparse) x@ja-1 else 0),
+                   as.integer (nrow(x)),
+                   as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.nrow( x ) else NROW(x)),
+                   as.integer (if ( class(x)=="BigMatrix.refer") bigm.internal.ncol( x ) else NCOL(x)),
+                   as.integer (if ( class(x)=="BigMatrix.refer") bigm.row.index( x )-1 else c(1:NROW(x))-1 ),
+                   as.integer (if ( class(x)=="BigMatrix.refer") bigm.col.index( x )-1 else c(1:NCOL(x))-1 ),
 
                    as.integer(verbose),
-                   error = as.integer(1),
-                   #DUP      = FALSE,
                    PACKAGE = "Rgtsvm");
+
 
     if ( cret$error!=0 ) stop("Error in GPU process.")
 
@@ -479,7 +528,6 @@ gtsvmpredict.regression.batch.call<-function( file.rds, x.count, obj.train, para
 gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, param=list(decision.values=FALSE, probability = FALSE), verbose=FALSE )
 {
     ptm <- proc.time();
-
     cret <- .C ("gtsvmpredict_classfication_batch",
                    as.integer (param$decision.values),
                    as.integer (param$probability),
@@ -530,4 +578,55 @@ gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, p
     if( obj.train$nclasses > 2 ) cret$ret <- cret$ret + 1;
 
     return(cret);
+}
+
+gtsvmpredict.loadsvm <- function( obj.train, verbose=FALSE)
+{
+    ptm <- proc.time();
+
+    cret <- .Call ("gtsvmpredict_loadsvm",
+               ## model
+               as.integer (obj.train$sparse),
+               as.double  (if (obj.train$sparse) obj.train$SV@ra else obj.train$SV ),
+               as.integer64 (if (obj.train$sparse) obj.train$SV@ia-1 else 0),
+               as.integer64 (if (obj.train$sparse) obj.train$SV@ja-1 else 0),
+               as.integer (NROW(obj.train$SV)),
+               as.integer (NCOL(obj.train$SV)),
+               as.integer (c(1:NROW(obj.train$SV))-1 ),
+               as.integer (c(1:NCOL(obj.train$SV))-1 ),
+
+               as.integer (if (obj.train$type == EPSILON_SVR) 0 else obj.train$nclasses),
+               as.integer (obj.train$tot.nSV),
+               as.double  (obj.train$rho),
+               as.double  (as.vector(obj.train$coefs)),
+
+               ## parameter
+               as.integer (obj.train$kernel),
+               as.integer (obj.train$degree),
+               as.double  (obj.train$gamma),
+               as.double  (obj.train$coef0),
+               as.double  (obj.train$cost),
+
+               as.integer(verbose),
+               PACKAGE = "Rgtsvm")
+
+    if ( cret$error!=0 ) stop("Error in GPU process.")
+
+    cret$t.elapsed <- proc.time() - ptm;
+	return(cret);
+}
+
+gtsvmpredict.unloadsvm <- function ( obj.train, verbose=FALSE)
+{
+   if( is.null(obj.train$pointer ) )
+        stop ("Model is not loaded into GPU node.!")
+
+	cret <- .Call ("gtsvmpredict_unloadsvm",
+               obj.train$pointer,
+               as.integer(verbose),
+               PACKAGE = "Rgtsvm")
+
+    if ( cret$error!=0 ) stop("Error in GPU process.")
+
+	return(cret);
 }
