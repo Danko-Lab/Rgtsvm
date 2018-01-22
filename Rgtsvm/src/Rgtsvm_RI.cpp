@@ -634,7 +634,6 @@ extern "C" SEXP gtsvmpredict_loadsvm  (
 			INTEGER( spError) );
 	}
 
-	//EXTPTR_PTR(spPointer) = p;
 	SEXP spPointer;
 	PROTECT( spPointer = R_MakeExternalPtr(p, install("pointer"), R_NilValue) );
 	SETCAR( t, spPointer );

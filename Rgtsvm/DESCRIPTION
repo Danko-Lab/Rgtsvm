@@ -1,13 +1,13 @@
 Package: Rgtsvm
-Version: 0.50
-Date: 2017-11-07
+Version: 0.52
+Date: 2018-01-18
 Title: The e1071 compatiblility SVM package for GPU architecture based on the GTSVM software
 Imports: graphics, grDevices, bit64, tools, methods, stats, utils, class
 Suggests: SparseM, Matrix
 Description: The e1071 compatiblility SVM package is built on the CUDA-enable GPU architecture with the following features, including: binary classification, multiclass classification and epsilon regression; 4 kernel functions; K-fold cross validation; big matrix handle.
 License: GPL(>=3)
 LazyLoad: yes
-Packaged: 2017-11-07; Zhong Wang
+Packaged: 2018-01-18; Zhong Wang
 Author: Zhong Wang <zw355@cornell.edu>
 Maintainer: Zhong Wang <zw355@cornell.edu>
 NeedsCompilation: yes

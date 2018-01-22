@@ -1,18 +1,18 @@
 ##
-##	Copyright (C) 2017  Zhong Wang
+##    Copyright (C) 2017  Zhong Wang
 ##
-##	This program is free software: you can redistribute it and/or modify
-##	it under the terms of the GNU General Public License as published by
-##	the Free Software Foundation, either version 3 of the License, or
-##	(at your option) any later version.
+##  This program is free software: you can redistribute it and/or modify
+##  it under the terms of the GNU General Public License as published by
+##  the Free Software Foundation, either version 3 of the License, or
+##  (at your option) any later version.
 ##
-##	This program is distributed in the hope that it will be useful,
-##	but WITHOUT ANY WARRANTY; without even the implied warranty of
-##	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-##	GNU General Public License for more details.
+##  This program is distributed in the hope that it will be useful,
+##  but WITHOUT ANY WARRANTY; without even the implied warranty of
+##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##  GNU General Public License for more details.
 ##
-##	You should have received a copy of the GNU General Public License
-##	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+##  You should have received a copy of the GNU General Public License
+##  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ##
 
 ## Rgtsvm package,  Zhong Wang<zw355@cornell.edu>
@@ -433,9 +433,9 @@ svm.default <- function (x,
             org.idx <- sort.int( var.info$y.index, index.return=T )$ix;
 
             if(param$nclass==2)
-	            ret$decision.values <- cret$decision[org.idx]
-			else
-				ret$decision.values <- matrix( cret$decision,ncol=cret$nclasses )[org.idx, ];
+                ret$decision.values <- cret$decision[org.idx]
+            else
+                ret$decision.values <- matrix( cret$decision,ncol=cret$nclasses )[org.idx, ];
 
             ret$fitted <- as.factor(cret$predict[org.idx]);
             levels( ret$fitted ) <- var.info$lev;
@@ -980,7 +980,7 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
     ret2
 }
 
-predict.load <- function (object, verbose=FALSE )
+predict.load <- function (object, n.GPU=1, verbose=FALSE )
 {
     if( class (object) != "gtsvm")
       stop("Model type is not 'gtsvm'!");
@@ -1003,26 +1003,83 @@ predict.load <- function (object, verbose=FALSE )
     if (object$sparse || sparse)
         requireNamespace("SparseM");
 
-    # Call C/C++ interface to do predict
-    if(object$type == C_CLASSFICATION)
-        ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
-    else if(object$type == EPSILON_SVR)
-        ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+    pointer <- cluster <- NULL;
+    if (n.GPU==1)
+    {
+        # Call C/C++ interface to do predict
+        if(object$type == C_CLASSFICATION)
+            ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+        else if(object$type == EPSILON_SVR)
+            ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+        else
+            stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+        pointer <- ret$pointer;
+    }
     else
-        stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+    {
+        require(snow);
+        ## cl <- makeCluster( n.GPU, type = "SOCK", outfile="slave.snow.out")
+        cl <- makeCluster( n.GPU, type = "SOCK")
 
-	model <- object;
-	model$pointer <- ret$pointer;
+        ReomoteR1<- function( file.RDS )
+        {
+            require(Rgtsvm);
+            #!!! SpareM is fatal to run model trained in Sparse data!!!
+            require("SparseM");
+            object <- readRDS(file.RDS);
 
-	## In order to save memory, relase some 'big' data member;
-	if(NROW(model$SV)>3) model$SV <- model$SV[1:3,];
+cat("**", as.character(Sys.time()),"\n");
 
-	model$index <- NULL;
-	model$coefs <- NULL;
-	model$fitted <- NULL;
-	model$residuals <- NULL;
+            # Call C/C++ interface to do predict
+            if(object$type == C_CLASSFICATION)
+                ret <- gtsvmpredict.loadsvm( object, verbose=TRUE)
+            else if(object$type == EPSILON_SVR)
+                ret <- gtsvmpredict.loadsvm( object, verbose=TRUE)
+            else
+                return(FALSE);
 
-	return(model);
+cat("**", as.character(Sys.time()),"\n");
+
+            if( ret$error!=0 )
+                return(FALSE);
+
+            if(NROW(object$SV)>3) object$SV <- object$SV[1:3,];
+            object$index <- NULL;
+            object$coefs <- NULL;
+            object$fitted <- NULL;
+            object$residuals <- NULL;
+            object$pointer <- ret$pointer;
+            g.model <<- object;
+            rm(object);
+
+            return(TRUE);
+        }
+
+        file.RDS <-tempfile(".RDS");
+        saveRDS( object, file = file.RDS );
+
+        ret <- clusterApply(cl, rep(file.RDS, n.GPU), ReomoteR1);
+        if( !all(unlist(ret)))
+            stop(n.GPU-sum(unlist(ret)), "GPU(s) are failed to load SVM model.\n" )
+
+        unlink(file.RDS);
+        cluster <- list(type="snow_cluster", cluster=cl, ncores=n.GPU);
+
+
+    }
+
+    model <- object;
+    ## In order to save memory, relase some 'big' data member;
+    if(NROW(model$SV)>3) model$SV <- model$SV[1:3,];
+    model$index <- NULL;
+    model$coefs <- NULL;
+    model$fitted <- NULL;
+    model$residuals <- NULL;
+
+    model$pointer <- pointer;
+    model$cluster <- cluster;
+
+    return(model);
 }
 
 predict.run <- function (object, newdata,
@@ -1035,15 +1092,77 @@ predict.run <- function (object, newdata,
     if( class (object) != "gtsvm")
       stop("Model type is not 'gtsvm'!");
 
-    if (is.null(object$pointer) )
-      stop("Model is not loaded in GPU node, use 'predict.load' firstly.!");
-
-	ret <- predict.gtsvm(object, newdata,
+    if (!is.null(object$pointer) )
+        ret <- predict.gtsvm(object, newdata,
           decision.values = decision.values,
           probability = probability,
           verbose = verbose,
           ...,
-          na.action = na.omit);
+          na.action = na.omit)
+    else if (!is.null(object$cluster) )
+    {
+        ReomoteR2<- function(file.rdata)
+        {
+            load(file.rdata);
+
+            ret <- predict.gtsvm(g.model, newdata0,
+              decision.values = decision.values,
+              probability = probability,
+              verbose = verbose,
+              ...,
+              na.action = na.omit);
+
+            rm(newdata0);
+            gc(reset=TRUE);
+            return(ret);
+        }
+
+        len <- ceiling(NROW(newdata)/object$cluster$ncores);
+        if (len>10)
+        {
+            file.Rdata <- c();
+            for(i in 1:object$cluster$ncores)
+            {
+                fileRdata <- tempfile(".rdata");
+
+                i.start <- 1+(i-1)*len;
+                i.stop <- ifelse( i*len<=NROW(newdata), i*len, NROW(newdata));
+                newdata0 <- newdata[i.start:i.stop, ]
+                save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata)
+
+                file.Rdata <- c(file.Rdata, fileRdata);
+            }
+
+            ret <- clusterApply(object$cluster$cluster, file.Rdata, ReomoteR2 );
+            rm( file.Rdata );
+
+            new.ret <- new.names <- new.decision <- new.probabilities <-  c();
+            for(i in 1:object$cluster$ncores)
+            {
+                new.ret <- c(new.ret, ret[[i]]);
+                if(!is.null( attr(ret[[i]], "probabilities"))) new.probabilities <- c( new.probabilities, attr(ret[[i]], "probabilities") );
+                if(!is.null( attr(ret[[i]], "decision.values"))) new.decision <- c( new.decision, attr(ret[[i]], "decision.values") );
+                if(!is.null( attr(ret[[i]], "names"))) new.names <- c( new.names, attr(ret[[i]], "names") );
+            }
+
+            if(!is.null( attr(ret[[1]], "names"))) attr(new.ret, "names") <- new.names;
+            if(!is.null( attr(ret[[1]], "probabilities"))) attr(new.ret, "probabilities") <- new.probabilities;
+            if(!is.null( attr(ret[[1]], "decision.values"))) attr(new.ret, "decision.values") <- new.decision;
+            if(is.factor(ret[[1]])) { new.ret <- as.factor(new.ret); levels(new.ret) <- levels(ret[[1]]); }
+
+            ret <- new.ret;
+
+        }
+        else
+        {
+            fileRdata <- tempfile(".rdata");
+            save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata)
+            ret <- clusterApply(object$cluster$cluster, rep(file.Rds,object$cluster$ncores) , ReomoteR2 );
+            ret <- ret[[1]];
+        }
+    }
+    else
+        stop("Model is not loaded in GPU node, use 'predict.load' firstly.!");
 
     ret;
 }
@@ -1053,10 +1172,28 @@ predict.unload <- function (object )
     if ( class (object) != "gtsvm")
       stop("Model type is not 'gtsvm'!");
 
-    if (is.null(object$pointer) )
+    if (!is.null(object$pointer) )
+       ret <- gtsvmpredict.unloadsvm( object)
+    else if (!is.null(object$cluster) )
+    {
+        ReomoteR3<- function(i)
+        {
+            ret <- gtsvmpredict.unloadsvm( g.model );
+            g.model <<- NULL
+            rm(list = ls(), envir = globalenv());
+
+            return(ret$error==0);
+        }
+
+        ret <- clusterApply(object$cluster$cluster, 1:object$cluster$ncores, ReomoteR3 );
+        if( !all(unlist(ret)))
+            warning(n.GPU-sum(unlist(ret)), "GPU(s) are failed to unload SVM model.\n" )
+
+        ret <- stopCluster(object$cluster$cluster);
+        ret$error <- 0;
+    }
+    else
       stop("Model is not loaded in GPU node, use 'predict.load' firstly.!");
 
-    ret <- gtsvmpredict.unloadsvm( object);
-
-    invisible(ret$error);
+    invisible(ret$error==0);
 }
