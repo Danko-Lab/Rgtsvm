@@ -92,7 +92,7 @@ Rgtsvm is only available for the Linux and Mac OSX. The source code can be downl
     
 3. Boost library (http://www.boost.org/users/download/)
     
-4. Extra R Package: bit64
+4. Extra R Package: bit64, snow, SparseM, Matrix
     
 ### Install Rgtsvm
 
