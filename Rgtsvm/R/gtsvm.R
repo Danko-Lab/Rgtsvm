@@ -580,7 +580,7 @@ gtsvmpredict.classfication.batch.call<-function( file.rds, x.count, obj.train, p
     return(cret);
 }
 
-gtsvmpredict.loadsvm <- function( obj.train, verbose=FALSE)
+gtsvmpredict.loadsvm <- function( obj.train, deviceId = -1, verbose=FALSE)
 {
     ptm <- proc.time();
 
@@ -607,10 +607,17 @@ gtsvmpredict.loadsvm <- function( obj.train, verbose=FALSE)
                as.double  (obj.train$coef0),
                as.double  (obj.train$cost),
 
+               as.integer( deviceId),
                as.integer(verbose),
                PACKAGE = "Rgtsvm")
 
-    if ( cret$error!=0 ) stop("Error in GPU process.")
+    if ( cret$error!=0 )
+    {
+		if(cret$error==-1)
+    		stop("Error in device initialization.")
+    	else
+    		stop("Error in GPU computation.")
+	}
 
     cret$t.elapsed <- proc.time() - ptm;
 	return(cret);

@@ -568,6 +568,7 @@ extern "C" SEXP gtsvmpredict_loadsvm  (
 		SEXP spCoef0,
 		SEXP spCost,
 
+		SEXP spDeviceId,
 		SEXP spVerbose)
 {
 	SEXP spRet,t;
@@ -582,56 +583,67 @@ extern "C" SEXP gtsvmpredict_loadsvm  (
 	int nclass = INTEGER( spNclasses )[0];
 	void* p = NULL;
 
-	if( nclass!=0)
+	int nTotal = 0;
+	int nRet = gtsvm_selectDevice( INTEGER( spDeviceId )[0], &nTotal );
+	Rprintf("Total GPU:%d \n", nTotal);
+	if(nRet!=0)
 	{
-		p = gtsvmpredict_classfication_loadsvm (
-			INTEGER( spModelSparse ),
-			REAL( spModelX ),
-			(int64_t*)REAL( spModelVecOffset ),
-			(int64_t*)REAL( spModelVecIndex ),
-			INTEGER( spModelRow ),
-			INTEGER( spModelCol ),
-			INTEGER( spModelRowIndex ),
-			INTEGER( spModelColIndex ),
-
-			INTEGER( spNclasses ),
-			INTEGER( spTotnSV ),
-			REAL( spModelRho ),
-			REAL( spModelAlphas ),
-
-			INTEGER( spKernelType ),
-			INTEGER( spDegree ),
-			REAL( spGamma ),
-			REAL( spCoef0 ),
-			REAL( spCost ),
-
-			INTEGER( spVerbose ),
-			INTEGER( spError) );
+		Rprintf("Failed to select device(%d).\n", INTEGER( spDeviceId )[0] );
+		INTEGER(spError)[0] = -1;
 	}
 	else
 	{
-		p = gtsvmpredict_epsregression_loadsvm  (
-			INTEGER( spModelSparse ),
-			REAL( spModelX ),
-			(int64_t*)REAL( spModelVecOffset ),
-			(int64_t*)REAL( spModelVecIndex ),
-			INTEGER( spModelRow ),
-			INTEGER( spModelCol ),
-			INTEGER( spModelRowIndex ),
-			INTEGER( spModelColIndex ),
+		if( nclass!=0)
+		{
+			p = gtsvmpredict_classfication_loadsvm (
+				INTEGER( spModelSparse ),
+				REAL( spModelX ),
+				(int64_t*)REAL( spModelVecOffset ),
+				(int64_t*)REAL( spModelVecIndex ),
+				INTEGER( spModelRow ),
+				INTEGER( spModelCol ),
+				INTEGER( spModelRowIndex ),
+				INTEGER( spModelColIndex ),
 
-			INTEGER( spTotnSV ),
-			REAL( spModelRho ),
-			REAL( spModelAlphas ),
+				INTEGER( spNclasses ),
+				INTEGER( spTotnSV ),
+				REAL( spModelRho ),
+				REAL( spModelAlphas ),
 
-			INTEGER( spKernelType ),
-			INTEGER( spDegree ),
-			REAL( spGamma ),
-			REAL( spCoef0 ),
-			REAL( spCost ),
+				INTEGER( spKernelType ),
+				INTEGER( spDegree ),
+				REAL( spGamma ),
+				REAL( spCoef0 ),
+				REAL( spCost ),
 
-			INTEGER( spVerbose ),
-			INTEGER( spError) );
+				INTEGER( spVerbose ),
+				INTEGER( spError) );
+		}
+		else
+		{
+			p = gtsvmpredict_epsregression_loadsvm  (
+				INTEGER( spModelSparse ),
+				REAL( spModelX ),
+				(int64_t*)REAL( spModelVecOffset ),
+				(int64_t*)REAL( spModelVecIndex ),
+				INTEGER( spModelRow ),
+				INTEGER( spModelCol ),
+				INTEGER( spModelRowIndex ),
+				INTEGER( spModelColIndex ),
+
+				INTEGER( spTotnSV ),
+				REAL( spModelRho ),
+				REAL( spModelAlphas ),
+
+				INTEGER( spKernelType ),
+				INTEGER( spDegree ),
+				REAL( spGamma ),
+				REAL( spCoef0 ),
+				REAL( spCost ),
+
+				INTEGER( spVerbose ),
+				INTEGER( spError) );
+		}
 	}
 
 	SEXP spPointer;
@@ -659,6 +671,8 @@ extern "C" SEXP gtsvmpredict_unloadsvm(	SEXP spModelPointer, SEXP pVerbose)
 		gtsvmpredict_unloadsvm_C( EXTPTR_PTR(spModelPointer), INTEGER( spError ) );
 	else
 		INTEGER(spError)[0] = -1;
+
+	gtsvm_resetDevice();
 
 	UNPROTECT(2);
 

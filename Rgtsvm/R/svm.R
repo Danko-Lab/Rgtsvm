@@ -1008,9 +1008,10 @@ predict.load <- function (object, n.GPU=1, verbose=FALSE )
     {
         # Call C/C++ interface to do predict
         if(object$type == C_CLASSFICATION)
-            ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+            # deviceID starts from 0, but -1 indicates no device ID, generally use device "0" in CUDA codes.
+            ret <- gtsvmpredict.loadsvm( object, -1, verbose=verbose)
         else if(object$type == EPSILON_SVR)
-            ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+            ret <- gtsvmpredict.loadsvm( object, -1, verbose=verbose)
         else
             stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
         pointer <- ret$pointer;
@@ -1021,29 +1022,30 @@ predict.load <- function (object, n.GPU=1, verbose=FALSE )
         ## cl <- makeCluster( n.GPU, type = "SOCK", outfile="slave.snow.out")
         cl <- makeCluster( n.GPU, type = "SOCK")
 
-        ReomoteR1<- function( file.RDS )
+        ReomoteR1<- function( IdTabRds )
         {
-            require(Rgtsvm);
+            # extract device Id and model file.
+			deviceId <- strsplit(IdTabRds, split="\t")[[1]][1];
+			file.RDS <- strsplit(IdTabRds, split="\t")[[1]][2];
+
+			require(Rgtsvm);
             #!!! SpareM is fatal to run model trained in Sparse data!!!
             require("SparseM");
             object <- readRDS(file.RDS);
 
-cat("**", as.character(Sys.time()),"\n");
-
             # Call C/C++ interface to do predict
             if(object$type == C_CLASSFICATION)
-                ret <- gtsvmpredict.loadsvm( object, verbose=TRUE)
+                ret <- gtsvmpredict.loadsvm( object, deviceId, verbose=TRUE)
             else if(object$type == EPSILON_SVR)
-                ret <- gtsvmpredict.loadsvm( object, verbose=TRUE)
+                ret <- gtsvmpredict.loadsvm( object, deviceId, verbose=TRUE)
             else
                 return(FALSE);
-
-cat("**", as.character(Sys.time()),"\n");
 
             if( ret$error!=0 )
                 return(FALSE);
 
             if(NROW(object$SV)>3) object$SV <- object$SV[1:3,];
+
             object$index <- NULL;
             object$coefs <- NULL;
             object$fitted <- NULL;
@@ -1058,7 +1060,7 @@ cat("**", as.character(Sys.time()),"\n");
         file.RDS <-tempfile(".RDS");
         saveRDS( object, file = file.RDS );
 
-        ret <- clusterApply(cl, rep(file.RDS, n.GPU), ReomoteR1);
+        ret <- clusterApply(cl, paste( c(1:n.GPU)-1, file.RDS, sep="\t") , ReomoteR1);
         if( !all(unlist(ret)))
             stop(n.GPU-sum(unlist(ret)), "GPU(s) are failed to load SVM model.\n" )
 
