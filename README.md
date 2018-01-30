@@ -26,7 +26,7 @@ following:
 
 > 3) adding or altering some features in R code, such as cross-validation which is implemented in C/C++ in e1071 and has not been implemented in GT SVM.
 
-> 4) Supporting prediction on multiple GPU cards.  
+> 4) Supporting prediction using multiple GPU cards on single host.  
 
 
 ## Functions:
