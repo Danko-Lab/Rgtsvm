@@ -96,7 +96,7 @@ Rgtsvm is only available for the Linux and Mac OSX. The source code can be downl
     
 ### Install Rgtsvm
 
-Please install the required R package before you install Rgtsvm package. After the  installation of `dREG`, `snowfall` and `data.table` package, please install the **Rgtsvm** as following steps.
+Please install the required R package before you install Rgtsvm package. After the  installation of `bit64`, `snow`, `SparseM` and `Matrix` package, please install the **Rgtsvm** as following steps.
 
 ```
 
