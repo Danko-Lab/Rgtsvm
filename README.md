@@ -118,6 +118,7 @@ http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-ca
 As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100. And then  change the architecture type manually in the configure files, e.g.
 
 $Rgtsvm\configure line 2381: NCFLAGS="-arch=sm_20 -O2"  --> NCFLAGS="-arch=sm_60 -O2"
+
 $Rgtsvm\configure.ac line 30: NCFLAGS="-arch=sm_20 -O2" --> NCFLAGS="-arch=sm_60 -O2"
 
 ### Installation Example
