@@ -110,6 +110,17 @@ R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$B
 
 Please check the ***vignette*** (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf) to see more details.
 
+### Compile Rgtsvm using *CUDA 9.0*
+
+CUDA 9.0 prohibits the architecture sm_20, which is the most early type for GeForce series. Please check this link.
+http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+
+As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100. And then  change the architecture type manually in the configure files, e.g.
+
+$Rgtsvm\configure line 2381: NCFLAGS="-arch=sm_20 -O2"  --> NCFLAGS="-arch=sm_60 -O2"
+
+$Rgtsvm\configure.ac line 30: NCFLAGS="-arch=sm_20 -O2" --> NCFLAGS="-arch=sm_60 -O2"
+
 ### Installation Example
 
 #### Installation instructions on *stampede.tacc.xsede.org*
