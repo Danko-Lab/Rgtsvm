@@ -67,11 +67,11 @@ Please check the details in the ***manual*** (https://github.com/Danko-Lab/Rgtsv
 To use Rgtsvm, type: 
 
 ```
-library(Rgtsvm);
+> library(Rgtsvm);
 
-?svm
+> ?svm
 
-model <- svm(Species ~ ., data = iris);
+> model <- svm(Species ~ ., data = iris);
 ```
 
 ## Performance
@@ -102,11 +102,11 @@ Please install the required R package before you install Rgtsvm package. After t
 
 # Set $YOUR_CUDA_HOME and $YOUR_BOOST_HOME before installation
 
-git clone https://github.com/Danko-Lab/Rgtsvm.git
+$ git clone https://github.com/Danko-Lab/Rgtsvm.git
 
-cd Rgtsvm
+$ cd Rgtsvm
 
-R CMD INSTALL --configure-args="--with-cuda-home=$YOUR_CUDA_HOME --with-boost-home=$YOUR_BOOST_HOME" Rgtsvm
+$ R CMD INSTALL --configure-args="--with-cuda-home=$YOUR_CUDA_HOME --with-boost-home=$YOUR_BOOST_HOME" Rgtsvm
 
 ```
 
