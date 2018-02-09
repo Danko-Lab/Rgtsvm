@@ -6,12 +6,12 @@
   model loading, multiple predicting call, removing model from GPU. It is suitable for the prediction with huge samples using a big training model. 
 }
 \usage{
-predict.load(object, n.GPU=1, verbose=FALSE )
+predict.load(object, gpu.id=NULL, verbose=FALSE )
 }
 
 \arguments{
   \item{object}{an object of class \code{"gtsvm"} returned by \code{\link{svm}} in \emph{Rgtsvm} package.}
-  \item{n.GPU}{number of GPU cards, indicating multiple GPU cards are available for the prediction in parallel.}
+  \item{gpu.id}{a vector indicating multiple GPU device IDs are used for the prediction in parallel.}
   \item{verbose}{logical value indicating whether some alogrithm information is output into the R console, default is FALSE. }
 }
 \value{

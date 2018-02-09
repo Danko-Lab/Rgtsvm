@@ -581,21 +581,28 @@ extern "C" SEXP gtsvmpredict_loadsvm  (
 	t = CDR(t);
 
 	int nclass = INTEGER( spNclasses )[0];
-	void* p = NULL;
 
 	int nTotal = 0;
-	int nRet = gtsvm_selectDevice( INTEGER( spDeviceId )[0], &nTotal );
-	Rprintf("Total GPU:%d \n", nTotal);
-	if(nRet!=0)
+	int deviceId = INTEGER( spDeviceId )[0];
+	if( deviceId >= 0)
 	{
-		Rprintf("Failed to select device(%d).\n", INTEGER( spDeviceId )[0] );
-		INTEGER(spError)[0] = -1;
-	}
-	else
-	{
-		if( nclass!=0)
+		int nRet = gtsvm_selectDevice( deviceId, &nTotal );
+		Rprintf("Total GPU:%d \n", nTotal);
+		if(nRet!=0)
 		{
-			p = gtsvmpredict_classfication_loadsvm (
+			Rprintf("Failed to select device(%d).\n", INTEGER( spDeviceId )[0] );
+			INTEGER(spError)[0] = -1;
+
+			UNPROTECT(2);
+			return(spRet);
+		}
+	}
+
+
+	void* p = NULL;
+	if( nclass!=0)
+	{
+		p = gtsvmpredict_classfication_loadsvm (
 				INTEGER( spModelSparse ),
 				REAL( spModelX ),
 				(int64_t*)REAL( spModelVecOffset ),
@@ -618,10 +625,10 @@ extern "C" SEXP gtsvmpredict_loadsvm  (
 
 				INTEGER( spVerbose ),
 				INTEGER( spError) );
-		}
-		else
-		{
-			p = gtsvmpredict_epsregression_loadsvm  (
+	}
+	else
+	{
+		p = gtsvmpredict_epsregression_loadsvm  (
 				INTEGER( spModelSparse ),
 				REAL( spModelX ),
 				(int64_t*)REAL( spModelVecOffset ),
@@ -643,7 +650,6 @@ extern "C" SEXP gtsvmpredict_loadsvm  (
 
 				INTEGER( spVerbose ),
 				INTEGER( spError) );
-		}
 	}
 
 	SEXP spPointer;
@@ -832,4 +838,50 @@ extern "C" SEXP gtsvmpredict_classfication_direct  (
 
 	return(spRet);
 
+}
+
+extern "C" SEXP selectGPUDevice(	SEXP spDeviceId)
+{
+	SEXP spRet;
+   	PROTECT(spRet = allocVector( INTSXP, 1) );
+
+	int nTotal = 0;
+	int nRet = gtsvm_selectDevice( INTEGER( spDeviceId )[0], &nTotal );
+	if(nRet!=0)
+	{
+		INTEGER(spRet)[0] = nRet;
+
+		Rprintf("Total GPU:%d \n", nTotal);
+		Rprintf("Failed to select device(%d).\n", INTEGER( spDeviceId )[0] );
+	}
+	else
+		INTEGER(spRet)[0] = 0;
+
+	UNPROTECT(1);
+	return(spRet);
+}
+
+extern "C" SEXP resetGPUdevice()
+{
+	SEXP spRet;
+   	PROTECT(spRet = allocVector( INTSXP, 1) );
+	INTEGER(spRet)[0] = 0;
+
+	gtsvm_resetDevice();
+
+	UNPROTECT(1);
+
+	return(spRet);
+}
+
+extern "C" SEXP getGPUdeviceCount()
+{
+	SEXP spRet;
+   	PROTECT(spRet = allocVector( INTSXP, 1) );
+
+	INTEGER(spRet)[0]= gtsvm_GPUdeviceCount();
+
+	UNPROTECT(1);
+
+	return(spRet);
 }

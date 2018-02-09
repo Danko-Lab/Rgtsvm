@@ -9,6 +9,7 @@
       decision.values = FALSE,
       probability = FALSE,
       verbose=FALSE, 
+      gpu.id = NULL,
       ..., 
       na.action = na.omit)
 }
@@ -20,6 +21,7 @@
   \item{probability}{logical value indicating whether class probabilities should be computed and returned.}
   \item{verbose}{logical value indicating whether some alogrithm information is output into the R console, default is FALSE. }
   \item{\dots}{Unused currently.}
+  \item{gpu.id}{integer value indicating GPU device ID, starting from 0. No GPU device is changed by default. }
   \item{na.action}{a function to specify the action to be taken if \code{NA}s are found. The default action is \code{na.omit}, which leads to rejection of cases with missing values on any required variable. An alternative is \code{na.fail}, which causes an error if \code{NA} cases are found. (NOTE: If given, this argument must be named.}	
 }
 \value{

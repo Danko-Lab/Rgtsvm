@@ -518,3 +518,12 @@ extern "C" void gtsvm_resetDevice()
 	cudaDeviceReset();
 }
 
+
+extern "C" int gtsvm_GPUdeviceCount()
+{
+	int nCount = 0;
+	if ( cudaGetDeviceCount ( &nCount ) != cudaSuccess )
+		return(0);
+
+	return(nCount);
+}
