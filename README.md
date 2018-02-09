@@ -26,6 +26,8 @@ following:
 
 > 3) adding or altering some features in R code, such as cross-validation which is implemented in C/C++ in e1071 and has not been implemented in GT SVM.
 
+> 4) Supporting prediction using multiple GPU cards on single host for further speedup computation.  
+
 
 ## Functions:
 
@@ -65,11 +67,11 @@ Please check the details in the ***manual*** (https://github.com/Danko-Lab/Rgtsv
 To use Rgtsvm, type: 
 
 ```
-library(Rgtsvm);
+> library(Rgtsvm);
 
-?svm
+> ?svm
 
-model <- svm(Species ~ ., data = iris);
+> model <- svm(Species ~ ., data = iris);
 ```
 
 ## Performance
@@ -90,22 +92,29 @@ Rgtsvm is only available for the Linux and Mac OSX. The source code can be downl
     
 3. Boost library (http://www.boost.org/users/download/)
     
-4. Extra R Package: bit64
+4. Extra R Package: bit64, snow, SparseM, Matrix
     
 ### Install Rgtsvm
 
-Please install the required R package before you install Rgtsvm package. After the  installation of `dREG`, `snowfall` and `data.table` package, please install the **Rgtsvm** as following steps.
+Please install the required R package before you install Rgtsvm package. After the  installation of `bit64`, `snow`, `SparseM` and `Matrix` package, please install the **Rgtsvm** as following steps.
 
 ```
 
-# Set $CUDA_PATH and $BOOST_PATH before installation
+# Set $YOUR_CUDA_HOME and $YOUR_BOOST_HOME before installation
 
-git clone https://github.com/Danko-Lab/Rgtsvm.git
+$ git clone https://github.com/Danko-Lab/Rgtsvm.git
 
-cd Rgtsvm
+$ cd Rgtsvm
 
-R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtsvm
+$ R CMD INSTALL --configure-args="--with-cuda-home=$YOUR_CUDA_HOME --with-boost-home=$YOUR_BOOST_HOME" Rgtsvm
 
+```
+
+If you have installed the pakacge devtools, you can try these commands in R console:
+
+```
+> library(devtools)
+> install_github("Danko-lab/Rgtsvm/Rgtsvm", args="--configure-args='--with-cuda-home=YOUR_CUDA_PATH --with-boost-home=YOU_BOOST_PATH'" )
 ```
 
 Please check the ***vignette*** (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf) to see more details.
