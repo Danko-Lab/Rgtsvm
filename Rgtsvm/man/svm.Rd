@@ -30,10 +30,10 @@
       fitted      = TRUE,
       rough.cross = 0,
       no.change.x = TRUE,
+      gpu.id      = NULL,
       verbose     = FALSE,
       ...,
       subset,
-      gpu.id      = NULL,
       na.action   = na.omit)
 }
 \arguments{
@@ -77,13 +77,13 @@
   
   \item{no.change.x}{logical value indicating whther the function can change the \code{x} parameter. It would save CPU memory if this parameter is assigned to \code{FALSE} for the big matrix \code{x}. }
   
+  \item{gpu.id}{integer value indicating GPU device ID, starting from 0. No GPU device is changed by default. }
+
   \item{verbose}{logical value indicating whether some alogrithm information is output on R console, default is FALSE. }
   
   \item{\dots}{additional parameters for the low level fitting function \code{svm.default}}
   
   \item{subset}{a vector of index values specifying the cases to be used in the training sample.  (NOTE: If given, this argument must be named.)}
-
-  \item{gpu.id}{integer value indicating GPU device ID, starting from 0. No GPU device is changed by default. }
 
   \item{na.action}{a function to specify the action to be taken if \code{NA}s are found. The default action is \code{na.omit}, which leads to rejection of cases with missing values on any required variable. An alternative is \code{na.fail}, which causes an error if \code{NA} cases are found. (NOTE: If given, this argument must be named.)}	
 }

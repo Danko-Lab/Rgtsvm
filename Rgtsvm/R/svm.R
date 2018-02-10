@@ -234,10 +234,10 @@ svm.default <- function (x,
           fitted      = TRUE,
           rough.cross = 0,
           no.change.x = TRUE,
+          gpu.id      = NULL,
           verbose     = FALSE,
           ...,
           subset,
-          gpu.id      = NULL,
           na.action   = na.omit)
 {
     if (verbose) cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
@@ -614,8 +614,8 @@ cross_validation <- function ( y, x, param )
 predict.gtsvm <- function (object, newdata,
           decision.values = FALSE,
           probability = FALSE,
-          verbose = FALSE,
           gpu.id = NULL,
+          verbose = FALSE,
           ...,
           na.action = na.omit)
 {
@@ -904,7 +904,7 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
     }
 }
 
-predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, verbose = FALSE, gpu.id=NULL, ..., na.action = na.omit)
+predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, gpu.id=NULL, verbose = FALSE,  ..., na.action = na.omit)
 {
     if (missing(file.rds))
         stop("No RDS files are specified.\n");
