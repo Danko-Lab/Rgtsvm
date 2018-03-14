@@ -235,6 +235,7 @@ svm.default <- function (x,
           rough.cross = 0,
           no.change.x = TRUE,
           gpu.id      = NULL,
+          maxIter     = NULL,
           verbose     = FALSE,
           ...,
           subset,
@@ -333,7 +334,7 @@ svm.default <- function (x,
              shrinking=shrinking, cross=cross, rough.cross=rough.cross,
              sparse=sparse, probability=probability,
              biased = biased, fitted=fitted, nclass = var.info$nclass, class.weights= class.weights,
-             verbose = verbose);
+             maxIter=maxIter, verbose = verbose);
 
     x <- var.info$x;
     y <- var.info$y;

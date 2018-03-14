@@ -51,6 +51,8 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
 
     ptm <- proc.time();
     nr  <- NROW(x);
+    if(is.null(param$maxIter))
+    	param$maxIter <- NROW(x)*ifelse( NCOL(x)<=100, 100, NCOL(x) );
 
     if(is.null(param$class.weights))
         param$class.weights <- rep(1, param$nclass);
@@ -88,8 +90,8 @@ gtsvmtrain.classfication.call<-function(y, x, param, final.result=FALSE, verbose
                 as.double  (param$tolerance),
                 as.integer (param$fitted),
                 as.integer (param$biased),
-                ## maxItern = NROW(x)*100;
-                as.integer (NROW(x)*100),
+                ## maxIter = NROW(x)*100;
+                as.integer (param$maxIter ),
                 as.integer (ignoreNoProgress),
 
 ## #This part will be returned in SEXP object.
@@ -275,7 +277,8 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=F
     y <- c(y1, y1);
 
     nr <- nrow(x);
-    maxIter <- nr * 100;
+    if(is.null(param$maxIter))
+    	param$maxIter <- NROW(x)*ifelse( NCOL(x)<=100, 100, NCOL(x) );
 
     if( sys.nframe()> 6  && as.character( as.list(sys.call(-5))[[1]])=="tune" )
         ignoreNoProgress <- TRUE;
@@ -313,7 +316,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=F
                 as.double  (param$epsilon),
                 as.integer (param$shrinking),
                 as.integer (param$fitted),
-                as.integer (maxIter),
+                as.integer (param$maxIter),
                 as.integer (ignoreNoProgress),
 
 ## #This part will be returned in SEXP object.
