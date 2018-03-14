@@ -31,6 +31,7 @@
       rough.cross = 0,
       no.change.x = TRUE,
       gpu.id      = NULL,
+      maxIter     = NULL,
       verbose     = FALSE,
       ...,
       subset,
@@ -78,6 +79,8 @@
   \item{no.change.x}{logical value indicating whther the function can change the \code{x} parameter. It would save CPU memory if this parameter is assigned to \code{FALSE} for the big matrix \code{x}. }
   
   \item{gpu.id}{integer value indicating GPU device ID, starting from 0. No GPU device is changed by default. }
+
+  \item{maxIter}{integer value indicating maximum iteration, default is the number of feature elements (NROW(x)*NCOL(x)) }
 
   \item{verbose}{logical value indicating whether some alogrithm information is output on R console, default is FALSE. }
   
