@@ -3,7 +3,7 @@ Version: 0.55
 Date: 2018-02-09
 Title: The e1071 compatiblility SVM package for GPU architecture based on the GTSVM software
 Imports: graphics, grDevices, bit64, tools, methods, stats, utils, class
-Suggests: SparseM, Matrix
+Suggests: SparseM, Matrix, snow
 Description: The e1071 compatiblility SVM package is built on the CUDA-enable GPU architecture with the following features, including: binary classification, multiclass classification and epsilon regression; 4 kernel functions; K-fold cross validation; big matrix handle.
 License: GPL(>=3)
 LazyLoad: yes
