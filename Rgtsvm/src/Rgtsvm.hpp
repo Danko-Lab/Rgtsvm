@@ -404,4 +404,10 @@ extern "C" void gtsvmpredict_classfication_direct_C  (
 
 extern "C" void gtsvmpredict_unloadsvm_C ( void *pModel, int *pnError );
 
+extern "C" int gtsvm_selectDevice( int deviceID, int* nTotal );
+
+extern "C" void gtsvm_resetDevice();
+
+extern "C" int gtsvm_GPUdeviceCount();
+
 #endif    /* __RGTSVM_HPP__ */

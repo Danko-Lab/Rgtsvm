@@ -1,6 +1,8 @@
 # Rgtsvm
 
-The e1071 compatibility SVM package for GPU architecture based on the GTSVM software (http://ttic.uchicago.edu/~cotter/projects/gtsvm/)
+The e1071 compatibility SVM package for GPU architecture based on the [GTSVM](http://ttic.uchicago.edu/~cotter/projects/gtsvm/) software.
+
+[Vignette (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf)](https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf).
 
 ## Intoduction:
 
@@ -25,6 +27,8 @@ following:
 > 2) matching the SVM interface in the e1071 package so that R written around each implementation is exchangeable, 
 
 > 3) adding or altering some features in R code, such as cross-validation which is implemented in C/C++ in e1071 and has not been implemented in GT SVM.
+
+> 4) Supporting prediction using multiple GPU cards on single host for further speedup computation.  
 
 
 ## Functions:
@@ -65,11 +69,11 @@ Please check the details in the ***manual*** (https://github.com/Danko-Lab/Rgtsv
 To use Rgtsvm, type: 
 
 ```
-library(Rgtsvm);
+> library(Rgtsvm);
 
-?svm
+> ?svm
 
-model <- svm(Species ~ ., data = iris);
+> model <- svm(Species ~ ., data = iris);
 ```
 
 ## Performance
@@ -90,25 +94,45 @@ Rgtsvm is only available for the Linux and Mac OSX. The source code can be downl
     
 3. Boost library (http://www.boost.org/users/download/)
     
-4. Extra R Package: bit64
+4. Extra R Package: bit64, snow, SparseM, Matrix
     
 ### Install Rgtsvm
 
-Please install the required R package before you install Rgtsvm package. After the  installation of `dREG`, `snowfall` and `data.table` package, please install the **Rgtsvm** as following steps.
+Please install the required R package before you install Rgtsvm package. After the  installation of `bit64`, `snow`, `SparseM` and `Matrix` package, please install the **Rgtsvm** as following steps.
 
 ```
 
-# Set $CUDA_PATH and $BOOST_PATH before installation
+# Set $YOUR_CUDA_HOME and $YOUR_BOOST_HOME before installation
 
-git clone https://github.com/Danko-Lab/Rgtsvm.git
+$ git clone https://github.com/Danko-Lab/Rgtsvm.git
 
-cd Rgtsvm
+$ cd Rgtsvm
 
-R CMD INSTALL --configure-args="--with-cuda-home=$CUDA_PATH --with-boost-home=$BOOST_PATH" Rgtsvm
+$ make R_dependencies
 
+$ R CMD INSTALL --configure-args="--with-cuda-home=$YOUR_CUDA_HOME --with-boost-home=$YOUR_BOOST_HOME" Rgtsvm
+
+```
+
+If you have installed the pakacge devtools, you can try these commands in R console:
+
+```
+> library(devtools)
+> install_github("Danko-lab/Rgtsvm/Rgtsvm", args="--configure-args='--with-cuda-home=YOUR_CUDA_PATH --with-boost-home=YOU_BOOST_PATH'" )
 ```
 
 Please check the ***vignette*** (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf) to see more details.
+
+### Compile Rgtsvm using *CUDA 9.0*
+
+CUDA 9.0 prohibits the architecture sm_20, which is the most early type for GeForce series. Please check this link.
+http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+
+As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100. And then  change the architecture type manually in the configure files, e.g.
+
+$Rgtsvm\configure line 2381: NCFLAGS="-arch=sm_20 -O2"  --> NCFLAGS="-arch=sm_60 -O2"
+
+$Rgtsvm\configure.ac line 30: NCFLAGS="-arch=sm_20 -O2" --> NCFLAGS="-arch=sm_60 -O2"
 
 ### Installation Example
 

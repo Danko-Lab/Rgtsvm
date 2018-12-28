@@ -7,7 +7,7 @@
 ## Copyright (C) 2010 Brian J Smith
 ## Licensed under GNU GPL 3 or later
 
-AC_INIT([gpu.svm], 0.0.1)
+AC_INIT([Rgtsvm], 0.0.1)
 #AC_CONFIG_AUX_DIR([tools])
 
 #################### GCC Compiler ####################
@@ -27,7 +27,7 @@ NVCC=${CUDA_HOME}/bin/nvcc
 AC_CHECK_FILE([${NVCC}],,
 	[AC_MSG_ERROR([nvcc not found!])])
 
-NCFLAGS="-arch=sm_20 -O2"
+NCFLAGS="-arch=sm_50 -O2"
 CUDA_INC=${CUDA_HOME}/include
 AC_MSG_CHECKING([for CUDA headers])
 AC_CHECK_FILE([${CUDA_INC}/cublas.h],
@@ -98,6 +98,7 @@ AC_SUBST([CXXFLAGS])
 AC_SUBST([NCFLAGS])
 AC_SUBST([LDFLAGS])
 AC_SUBST([LIBS])
+AC_SUBST([CUDA_INC])
 
 AC_CONFIG_FILES([src/Makefile])
 AC_OUTPUT

@@ -234,10 +234,12 @@ svm.default <- function (x,
           fitted      = TRUE,
           rough.cross = 0,
           no.change.x = TRUE,
+          gpu.id      = NULL,
+          maxIter     = NULL,
           verbose     = FALSE,
           ...,
           subset,
-          na.action = na.omit)
+          na.action   = na.omit)
 {
     if (verbose) cat("cost=", cost, " gamma=", gamma, " epsilon=", epsilon, "coef0=", coef0, "degree=", degree, "\n");
 
@@ -332,7 +334,7 @@ svm.default <- function (x,
              shrinking=shrinking, cross=cross, rough.cross=rough.cross,
              sparse=sparse, probability=probability,
              biased = biased, fitted=fitted, nclass = var.info$nclass, class.weights= class.weights,
-             verbose = verbose);
+             maxIter=maxIter, verbose = verbose);
 
     x <- var.info$x;
     y <- var.info$y;
@@ -340,10 +342,14 @@ svm.default <- function (x,
     x.scale <- var.info$x.scale;
     y.scale <- var.info$y.scale;
 
+	if( !is.null(gpu.id) ) selectGPUdevice(gpu.id);
+
     if( type == C_CLASSFICATION)
         cret <- gtsvmtrain.classfication.call( y, x, param, verbose=verbose );
     if( type == EPSILON_SVR)
         cret <- gtsvmtrain.regression.call( y, x, param, verbose=verbose );
+
+	if( !is.null(gpu.id) ) resetGPUdevice();
 
     gtsvm.class <- ifelse( cret$nclasses==2, 1, cret$nclasses );
     if (missing(subset)) subset <- NULL;
@@ -609,6 +615,7 @@ cross_validation <- function ( y, x, param )
 predict.gtsvm <- function (object, newdata,
           decision.values = FALSE,
           probability = FALSE,
+          gpu.id = NULL,
           verbose = FALSE,
           ...,
           na.action = na.omit)
@@ -699,6 +706,8 @@ predict.gtsvm <- function (object, newdata,
 
     param <- list( decision.values = decision.values, probability = probability );
 
+	if ( !is.null(gpu.id) ) selectGPUdevice(gpu.id);
+
     # Call C/C++ interface to do predict
     if(object$type == C_CLASSFICATION)
         ret <- gtsvmpredict.classfication.call( newdata, sparse, object, param, verbose=verbose)
@@ -706,6 +715,8 @@ predict.gtsvm <- function (object, newdata,
         ret <- gtsvmpredict.regression.call( newdata, sparse, object, param, verbose=verbose)
     else
         stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+
+	if ( !is.null(gpu.id) ) resetGPUdevice();
 
     ret2 <- ret$ret;
     if (is.character(object$levels)) # classification: return factors
@@ -894,7 +905,7 @@ plot.gtsvm <- function(x, data, formula = NULL, fill = TRUE,
     }
 }
 
-predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, verbose = FALSE, ..., na.action = na.omit)
+predict.batch <- function (object, file.rds, decision.values = TRUE, probability = FALSE, gpu.id=NULL, verbose = FALSE,  ..., na.action = na.omit)
 {
     if (missing(file.rds))
         stop("No RDS files are specified.\n");
@@ -923,6 +934,8 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
 
     param <- list( decision.values = decision.values, probability = probability );
 
+	if ( !is.null(gpu.id) ) selectGPUdevice(gpu.id);
+
     # Call C/C++ interface to do predict
     if(object$type == C_CLASSFICATION)
         ret <- gtsvmpredict.classfication.batch.call( file.rds, x.count, object, param, verbose=verbose)
@@ -930,6 +943,8 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
         ret <- gtsvmpredict.regression.batch.call( file.rds, x.count, object, param, verbose=verbose)
     else
         stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
+
+	if ( !is.null(gpu.id) ) resetGPUdevice();
 
     ret2 <- ret$ret;
     if (is.character(object$levels)) # classification: return factors
@@ -980,7 +995,7 @@ predict.batch <- function (object, file.rds, decision.values = TRUE, probability
     ret2
 }
 
-predict.load <- function (object, n.GPU=1, verbose=FALSE )
+predict.load <- function (object, gpu.id=NULL, verbose=FALSE )
 {
     if( class (object) != "gtsvm")
       stop("Model type is not 'gtsvm'!");
@@ -1004,13 +1019,16 @@ predict.load <- function (object, n.GPU=1, verbose=FALSE )
         requireNamespace("SparseM");
 
     pointer <- cluster <- NULL;
-    if (n.GPU==1)
+
+    #use the current GPU device
+    if ( is.null(gpu.id) )
     {
         # Call C/C++ interface to do predict
         if(object$type == C_CLASSFICATION)
-            ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+            # deviceID starts from 0, but -1 indicates no device ID, generally use device "0" in CUDA codes.
+            ret <- gtsvmpredict.loadsvm( object, -1, verbose=verbose)
         else if(object$type == EPSILON_SVR)
-            ret <- gtsvmpredict.loadsvm( object, verbose=verbose)
+            ret <- gtsvmpredict.loadsvm( object, -1, verbose=verbose)
         else
             stop("only 'C-classification' and 'eps-regression' are implemented in this package!");
         pointer <- ret$pointer;
@@ -1018,32 +1036,33 @@ predict.load <- function (object, n.GPU=1, verbose=FALSE )
     else
     {
         require(snow);
-        ## cl <- makeCluster( n.GPU, type = "SOCK", outfile="slave.snow.out")
-        cl <- makeCluster( n.GPU, type = "SOCK")
+        ## cl <- makeCluster( length(gpu.id), type = "SOCK", outfile="slave.snow.out")
+        cl <- makeCluster( length(gpu.id), type = "SOCK");
 
-        ReomoteR1<- function( file.RDS )
+        ReomoteR1<- function( IdTabRds )
         {
-            require(Rgtsvm);
+            # extract device Id and model file.
+			deviceId <- strsplit(IdTabRds, split="\t")[[1]][1];
+			file.RDS <- strsplit(IdTabRds, split="\t")[[1]][2];
+
+			require(Rgtsvm);
             #!!! SpareM is fatal to run model trained in Sparse data!!!
             require("SparseM");
             object <- readRDS(file.RDS);
 
-cat("**", as.character(Sys.time()),"\n");
-
             # Call C/C++ interface to do predict
             if(object$type == C_CLASSFICATION)
-                ret <- gtsvmpredict.loadsvm( object, verbose=TRUE)
+                ret <- gtsvmpredict.loadsvm( object, deviceId, verbose=TRUE)
             else if(object$type == EPSILON_SVR)
-                ret <- gtsvmpredict.loadsvm( object, verbose=TRUE)
+                ret <- gtsvmpredict.loadsvm( object, deviceId, verbose=TRUE)
             else
                 return(FALSE);
-
-cat("**", as.character(Sys.time()),"\n");
 
             if( ret$error!=0 )
                 return(FALSE);
 
             if(NROW(object$SV)>3) object$SV <- object$SV[1:3,];
+
             object$index <- NULL;
             object$coefs <- NULL;
             object$fitted <- NULL;
@@ -1058,12 +1077,12 @@ cat("**", as.character(Sys.time()),"\n");
         file.RDS <-tempfile(".RDS");
         saveRDS( object, file = file.RDS );
 
-        ret <- clusterApply(cl, rep(file.RDS, n.GPU), ReomoteR1);
+        ret <- clusterApply(cl, paste( gpu.id, file.RDS, sep="\t") , ReomoteR1);
         if( !all(unlist(ret)))
-            stop(n.GPU-sum(unlist(ret)), "GPU(s) are failed to load SVM model.\n" )
+            stop(length(gpu.id) - sum(unlist(ret)), "GPU(s) are failed to load SVM model.\n" )
 
         unlink(file.RDS);
-        cluster <- list(type="snow_cluster", cluster=cl, ncores=n.GPU);
+        cluster <- list(type="snow_cluster", cluster=cl, ncores=gpu.id);
 
 
     }
@@ -1128,7 +1147,7 @@ predict.run <- function (object, newdata,
                 i.start <- 1+(i-1)*len;
                 i.stop <- ifelse( i*len<=NROW(newdata), i*len, NROW(newdata));
                 newdata0 <- newdata[i.start:i.stop, ]
-                save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata)
+                show( system.time(  save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
 
                 file.Rdata <- c(file.Rdata, fileRdata);
             }
@@ -1156,7 +1175,7 @@ predict.run <- function (object, newdata,
         else
         {
             fileRdata <- tempfile(".rdata");
-            save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata)
+            save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata);
             ret <- clusterApply(object$cluster$cluster, rep(file.Rds,object$cluster$ncores) , ReomoteR2 );
             ret <- ret[[1]];
         }
@@ -1173,7 +1192,7 @@ predict.unload <- function (object )
       stop("Model type is not 'gtsvm'!");
 
     if (!is.null(object$pointer) )
-       ret <- gtsvmpredict.unloadsvm( object)
+       ret <- gtsvmpredict.unloadsvm( object )
     else if (!is.null(object$cluster) )
     {
         ReomoteR3<- function(i)
@@ -1185,9 +1204,9 @@ predict.unload <- function (object )
             return(ret$error==0);
         }
 
-        ret <- clusterApply(object$cluster$cluster, 1:object$cluster$ncores, ReomoteR3 );
+        ret <- clusterApply(object$cluster$cluster, 1:length(object$cluster$ncores), ReomoteR3 );
         if( !all(unlist(ret)))
-            warning(n.GPU-sum(unlist(ret)), "GPU(s) are failed to unload SVM model.\n" )
+            warning( length(object$cluster$ncores) - sum(unlist(ret)), "GPU(s) are failed to unload SVM model.\n" )
 
         ret <- stopCluster(object$cluster$cluster);
         ret$error <- 0;
@@ -1196,4 +1215,19 @@ predict.unload <- function (object )
       stop("Model is not loaded in GPU node, use 'predict.load' firstly.!");
 
     invisible(ret$error==0);
+}
+
+selectGPUdevice<-function( gpu.id )
+{
+	.Call( "selectGPUDevice", as.integer ( gpu.id ) );
+}
+
+resetGPUdevice<-function()
+{
+	.Call( "resetGPUdevice");
+}
+
+getGPUcount<-function()
+{
+	.Call( "getGPUdeviceCount");
 }

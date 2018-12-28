@@ -491,3 +491,39 @@ extern "C" void gtsvmpredict_unloadsvm_C( void *pModel, int *pnError  )
 	_CATCH_EXCEPTIONS_
 	_CHECK_EXCEPTIONS_
 }
+
+// deviceID starts from 0...nGPU-1
+extern "C" int gtsvm_selectDevice( int deviceID, int* npTotal )
+{
+	if ( cudaGetDeviceCount ( npTotal ) != cudaSuccess )
+		return(-1);
+
+	if( deviceID <0 )
+	{
+		if ( cudaSetDevice ( 0 ) != cudaSuccess )
+			return(-1);
+	}
+	else
+	{
+		if ( cudaSetDevice ( deviceID ) != cudaSuccess )
+			return(-1);
+	}
+
+	return(0);
+
+}
+
+extern "C" void gtsvm_resetDevice()
+{
+	cudaDeviceReset();
+}
+
+
+extern "C" int gtsvm_GPUdeviceCount()
+{
+	int nCount = 0;
+	if ( cudaGetDeviceCount ( &nCount ) != cudaSuccess )
+		return(0);
+
+	return(nCount);
+}

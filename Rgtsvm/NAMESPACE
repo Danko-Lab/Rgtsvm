@@ -33,6 +33,10 @@ export(summary.tune)
 export(print.tune)
 export(print.summary.tune)
 
+export(selectGPUdevice)
+export(resetGPUdevice)
+export(getGPUcount)
+
 S3method(summary, gtsvm)
 S3method(plot, gtsvm)
 S3method(predict, gtsvm)
