@@ -1142,13 +1142,18 @@ predict.run <- function (object, newdata,
             file.Rdata <- c();
             for(i in 1:object$cluster$ncores)
             {
-                fileRdata <- tempfile(".rdata");
+                fileRdata <- tempfile(fileext=".rdata");
 
                 i.start <- 1+(i-1)*len;
                 i.stop <- ifelse( i*len<=NROW(newdata), i*len, NROW(newdata));
                 newdata0 <- newdata[i.start:i.stop, ]
-                show( system.time(  save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
-
+                err=try(show( system.time( save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) ), silent=TRUE);
+                if(class(err)=="try-error")
+                {
+                  fileRdata <- tempfile(fileext=".rdata", tmpdir =".");
+                  show( system.time( save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
+                }  
+                
                 file.Rdata <- c(file.Rdata, fileRdata);
             }
 
