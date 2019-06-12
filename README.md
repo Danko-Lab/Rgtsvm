@@ -108,6 +108,8 @@ $ git clone https://github.com/Danko-Lab/Rgtsvm.git
 
 $ cd Rgtsvm
 
+$ make R_dependencies
+
 $ R CMD INSTALL --configure-args="--with-cuda-home=$YOUR_CUDA_HOME --with-boost-home=$YOUR_BOOST_HOME" Rgtsvm
 
 ```
