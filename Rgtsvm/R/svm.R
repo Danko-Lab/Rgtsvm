@@ -316,10 +316,14 @@ svm.default <- function (x,
         x <- attach.bigmatrix(x.backup);
     }
 
+    push_bigm = FALSE;
     # After this push, x$data will be scaled, so we have to save it to a RDS file(rds.save=TRUE).
-    if ( inherits(x, "BigMatrix.refer") && no.change.x)
+    if ( inherits(x, "BigMatrix.refer") && no.change.x )
+    {
+        push_bigm = TRUE;
         bigm.push(x, rds.save=TRUE);
-
+    }
+    
     var.info <- check_var_info( x, y, sparse, type, scale, subset, na.action )
 
     if ( cross > var.info$nr )
@@ -409,6 +413,13 @@ svm.default <- function (x,
 
     if (cross > 0 )
     {
+        ## Above codes changed big matrix (x), x should be restored before cross validation
+        if(push_bigm) 
+        {
+            bigm.pop(x);
+            bigm.push(x, rds.save=TRUE);
+        }    
+        
         if (inherits(x, "BigMatrix.refer") ) bigm.push(x);
         cross.ret <- cross_validation( y, x, param );
         if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
@@ -1137,7 +1148,7 @@ predict.run <- function (object, newdata,
         }
 
         len <- ceiling(NROW(newdata)/object$cluster$ncores);
-        if (len>10)
+        if (len>100)
         {
             file.Rdata <- c();
             for(i in 1:object$cluster$ncores)
@@ -1176,7 +1187,7 @@ predict.run <- function (object, newdata,
         {
             fileRdata <- tempfile(".rdata");
             save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata);
-            ret <- clusterApply(object$cluster$cluster, rep(file.Rds,object$cluster$ncores) , ReomoteR2 );
+            ret <- clusterApply(object$cluster$cluster, rep(fileRdata,object$cluster$ncores) , ReomoteR2 );
             ret <- ret[[1]];
         }
     }
