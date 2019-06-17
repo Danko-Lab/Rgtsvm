@@ -425,11 +425,11 @@ svm.default <- function (x,
         if (inherits(x, "BigMatrix.refer") ) bigm.pop(x);
 
         ret$cross <- param$cross;
-        ret$rough.cross <- param$rough.cross ;
+        ret$rough.cross <- param$rough.cross;
 
         if ( type > 2)
         {
-            scale.factor     <- if (any(scale)) crossprod(y.scale$"scaled:scale") else 1;
+            scale.factor     <- if (any(scale)) c(crossprod(y.scale$"scaled:scale")) else 1;
             ret$MSE          <- cross.ret$cresults * scale.factor;
             ret$tot.MSE      <- cross.ret$ctotal1  * scale.factor;
             ret$scorrcoeff   <- cross.ret$ctotal2;
