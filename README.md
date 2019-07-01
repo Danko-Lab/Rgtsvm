@@ -123,18 +123,16 @@ If you have installed the pakacge devtools, you can try these commands in R cons
 
 Please check the ***vignette*** (https://github.com/Danko-Lab/Rgtsvm/blob/master/Rgtsvm-vignette.pdf) to see more details.
 
-### Compile Rgtsvm using *CUDA 9.0*
-
-CUDA 9.0 prohibits the architecture sm_20, which is the most early type for GeForce series. Please check this link.
-http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
-
-As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100. And then  change the architecture type manually in the configure files, e.g.
-
-$Rgtsvm\configure line 2381: NCFLAGS="-arch=sm_20 -O2"  --> NCFLAGS="-arch=sm_60 -O2"
-
-$Rgtsvm\configure.ac line 30: NCFLAGS="-arch=sm_20 -O2" --> NCFLAGS="-arch=sm_60 -O2"
-
 ### Specify CUDA arch on CUDA 7 and later
+
+If you get the following errors for a simple training example, maybe you need to conside the NVIDIA GPU type when you install Rgtsvm.
+
+```
+> library(Rgtsvm)
+> svm_iris<- Rgtsvm::svm(Species ~ ., data=iris)
+ Error: SparseKernelFindLargestScore: did not find the desired number of maxima[1]
+ Error in gtsvmtrain.classfication.call(y, x, param, verbose = verbose) : Error in GPU process.
+```
 
 CUDA 7.0 and later supports multiple NVIDIA GPU architectures that the CUDA files will be compiled for.
 http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
