@@ -134,6 +134,23 @@ $Rgtsvm\configure line 2381: NCFLAGS="-arch=sm_20 -O2"  --> NCFLAGS="-arch=sm_60
 
 $Rgtsvm\configure.ac line 30: NCFLAGS="-arch=sm_20 -O2" --> NCFLAGS="-arch=sm_60 -O2"
 
+### Specify CUDA arch on CUDA 7 and later
+
+CUDA 7.0 and later supports multiple NVIDIA GPU architectures that the CUDA files will be compiled for.
+http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+
+As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100, sm_35 for Tesla K40. And then set the architecture in your install command
+
+```
+> library(devtools)
+> install_github("Danko-lab/Rgtsvm/Rgtsvm", args="--configure-args='--with-cuda-arch=sm_35 --with-cuda-home=YOUR_CUDA_PATH --with-boost-home=YOU_BOOST_PATH'" )
+```
+Or
+
+```
+ R CMD INSTALL --configure-args="-with-cuda-arch=sm_35 --with-cuda-home=YOUR_CUDA_PATH --with-boost-home=YOU_BOOST_PATH" Rgtsvm
+```
+
 ### Installation Example
 
 #### Installation instructions on *stampede.tacc.xsede.org*
