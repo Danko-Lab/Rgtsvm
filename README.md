@@ -137,7 +137,7 @@ If you get the following errors for a simple training example, maybe you need to
 CUDA 7.0 and later supports multiple NVIDIA GPU architectures that the CUDA files will be compiled for.
 http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 
-As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100, sm_35 for Tesla K40. And then set the architecture in your install command
+As described in above link, you should select one architecture type, such as sm_50 for TitanX or sm_60 for P100, sm_35 for Tesla K40. And then set the architecture in your install command using the option --with-cuda-arch.
 
 ```
 > library(devtools)
