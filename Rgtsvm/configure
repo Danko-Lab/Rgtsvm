@@ -636,6 +636,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_cuda_arch
 with_cuda_home
 with_boost_home
 with_r_home
@@ -1256,6 +1257,8 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-cuda-arch=STR    Find the CUDA Arch in
+                          http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards
   --with-cuda-home=DIR    full path to CUDA installation [/usr/local/cuda]
   --with-boost-home=DIR   full path to BOOST installation [/usr/local/boost]
   --with-r-home=DIR       full path to R installation []
@@ -2341,7 +2344,21 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-#################### CUDA Toolkit ####################
+#################### CUDA ARCH ####################
+
+
+# Check whether --with-cuda-arch was given.
+if test "${with_cuda_arch+set}" = set; then :
+  withval=$with_cuda_arch; CUDA_ARCH="$withval"
+else
+  CUDA_ARCH=sm_50
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: setting CUDA ARCH to ${CUDA_ARCH}" >&5
+$as_echo "setting CUDA ARCH to ${CUDA_ARCH}" >&6; }
+
+
+#################### CUDA PATH ####################
 
 
 # Check whether --with-cuda-home was given.
@@ -2379,7 +2396,7 @@ else
 fi
 
 
-NCFLAGS="-arch=sm_50 -O2"
+NCFLAGS="-arch=${CUDA_ARCH} -O2"
 CUDA_INC=${CUDA_HOME}/include
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CUDA headers" >&5
 $as_echo_n "checking for CUDA headers... " >&6; }
@@ -2447,7 +2464,7 @@ LIBS="-lcuda"
 if test "${with_boost_home+set}" = set; then :
   withval=$with_boost_home; BOOST_HOME="$withval"
 else
-  BOOST_HOME=/usr/local/cuda
+  BOOST_HOME=/usr/local/boost
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: setting BOOST home directory to ${BOOST_HOME}" >&5
