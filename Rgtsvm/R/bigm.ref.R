@@ -393,7 +393,14 @@ setMethod("bigm.push", "BigMatrix.refer", function(x, rds.save=FALSE) {
     if(rds.save)
     {
          x$file.backup = tempfile(pattern="rgtsvm.bigm.", fileext=".rds");
-         saveRDS(x$data, file = x$file.backup );
+         err=try(saveRDS(x$data, file = x$file.backup ), silent=TRUE);
+         if(class(err)=="try-error")
+         {
+            x$file.backup = tempfile(pattern="rgtsvm.bigm.", fileext=".rds", tmpdir =".");
+            saveRDS( x$data, file = x$file.backup );
+         }
+         
+         
          ## cat("The training data is backuped in", x$file.backup, "\n");
 
          ## system.time( saveRDS(2.7G data , "2.7Gdata.RDS" ))

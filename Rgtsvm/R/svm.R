@@ -1075,8 +1075,13 @@ predict.load <- function (object, gpu.id=NULL, verbose=FALSE )
         }
 
         file.RDS <-tempfile(".RDS");
-        saveRDS( object, file = file.RDS );
-
+        err=try(show( system.time( saveRDS( object, file = file.RDS ) ) ), silent=TRUE);
+        if(class(err)=="try-error")
+        {
+           fileRdata <- tempfile(fileext=".RDS", tmpdir =".");
+           show( system.time( saveRDS( object, file = file.RDS ) ) );
+        }  
+        
         ret <- clusterApply(cl, paste( gpu.id, file.RDS, sep="\t") , ReomoteR1);
         if( !all(unlist(ret)))
             stop(length(gpu.id) - sum(unlist(ret)), "GPU(s) are failed to load SVM model.\n" )
@@ -1158,7 +1163,7 @@ predict.run <- function (object, newdata,
             }
 
             ret <- clusterApply(object$cluster$cluster, file.Rdata, ReomoteR2 );
-            rm( file.Rdata );
+            unlink( file.Rdata );
 
             new.ret <- new.names <- new.decision <- new.probabilities <-  c();
             for(i in 1:object$cluster$ncores)
@@ -1180,9 +1185,16 @@ predict.run <- function (object, newdata,
         else
         {
             fileRdata <- tempfile(".rdata");
-            save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata);
-            ret <- clusterApply(object$cluster$cluster, rep(file.Rds,object$cluster$ncores) , ReomoteR2 );
+            err=try(show( system.time( save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) ), silent=TRUE);
+            if(class(err)=="try-error")
+            {
+               fileRdata <- tempfile(fileext=".rdata", tmpdir =".");
+               show( system.time( save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
+            }  
+            
+            ret <- clusterApply(object$cluster$cluster, rep(fileRdata,object$cluster$ncores) , ReomoteR2 );
             ret <- ret[[1]];
+            unlink( fileRdata );
         }
     }
     else
