@@ -115,7 +115,7 @@
 
   \item{compprob}{logical values if probability is predicted.}
   \item{probA}{numerical value indicating (1) the parameter A of the logistic distributions fitted to the decision values of the binary classifiers 
-  (2) the \gamma coefficient of the softmax function for the multi-classification in one-agianst-rest mode. (3) the \zeta parameter of the Laplace distributions for the eps-regression  if \code{probability==TRUE}.}
+  (2) the \eqn{\gamma} coefficient of the softmax function for the multi-classification in one-agianst-rest mode. (3) the \eqn{\zeta} parameter of the Laplace distributions for the eps-regression  if \code{probability==TRUE}.}
   \item{probB}{numerical value indicating the parameter B of the logistic distributions fitted to the decision values of the binary classifiers if \code{probability==TRUE}. }
   
 }

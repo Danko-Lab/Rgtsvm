@@ -365,6 +365,7 @@ gtsvmtrain.regression.call<-function(y1, x, param, final.result=FALSE, verbose=F
 
             #number of classes
             nclasses  = 1,
+            nr        = cret$nr,
             # total number of sv
             tot.nSV   = cret$nr,
             # number of SV in diff. classes

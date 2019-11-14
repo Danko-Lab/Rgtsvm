@@ -15,7 +15,16 @@ AC_INIT([Rgtsvm], 0.0.1)
 AC_PROG_CC(gcc)
 
 
-#################### CUDA Toolkit ####################
+#################### CUDA ARCH ####################
+
+AC_ARG_WITH([cuda-arch],
+	[AC_HELP_STRING([--with-cuda-arch=STR],
+		[Find the CUDA Arch in http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards])],
+	[CUDA_ARCH="$withval"], [CUDA_ARCH=sm_50])
+AC_MSG_RESULT([setting CUDA ARCH to ${CUDA_ARCH}])
+
+
+#################### CUDA PATH ####################
 
 AC_ARG_WITH([cuda-home],
 	[AC_HELP_STRING([--with-cuda-home=DIR],
@@ -27,7 +36,7 @@ NVCC=${CUDA_HOME}/bin/nvcc
 AC_CHECK_FILE([${NVCC}],,
 	[AC_MSG_ERROR([nvcc not found!])])
 
-NCFLAGS="-arch=sm_50 -O2"
+NCFLAGS="-arch=${CUDA_ARCH} -O2"
 CUDA_INC=${CUDA_HOME}/include
 AC_MSG_CHECKING([for CUDA headers])
 AC_CHECK_FILE([${CUDA_INC}/cublas.h],
