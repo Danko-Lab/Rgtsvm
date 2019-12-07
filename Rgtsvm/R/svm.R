@@ -1196,13 +1196,14 @@ predict.run <- function (object, newdata,
         }
         else
         {
+            newdata0 <- newdata;
             fileRdata <- tempfile(".rdata");
-            err=try(save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata), silent=TRUE);
+            err=try(save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata), silent=TRUE);
             if(class(err)=="try-error")
             {
                fileRdata <- tempfile(fileext=".rdata", tmpdir =".");
                warning("Failed to save data to temporary folder, now save it to working directory");
-               show( system.time( save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
+               show( system.time( save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
             }  
 
             ret <- clusterApply(object$cluster$cluster, rep(fileRdata,object$cluster$ncores) , ReomoteR2 );
