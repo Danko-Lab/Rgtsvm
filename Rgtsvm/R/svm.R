@@ -1163,10 +1163,11 @@ predict.run <- function (object, newdata,
                 i.start <- 1+(i-1)*len;
                 i.stop <- ifelse( i*len<=NROW(newdata), i*len, NROW(newdata));
                 newdata0 <- newdata[i.start:i.stop, ]
-                err=try(show( system.time( save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) ), silent=TRUE);
+                err=try( save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata), silent=TRUE);
                 if(class(err)=="try-error")
                 {
                   fileRdata <- tempfile(fileext=".rdata", tmpdir =".");
+                  warning("Failed to save data to temporary folder, now save it to working directory");
                   show( system.time( save(newdata0, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
                 }  
                 
@@ -1196,10 +1197,11 @@ predict.run <- function (object, newdata,
         else
         {
             fileRdata <- tempfile(".rdata");
-            err=try(show( system.time( save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) ), silent=TRUE);
+            err=try(save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata), silent=TRUE);
             if(class(err)=="try-error")
             {
                fileRdata <- tempfile(fileext=".rdata", tmpdir =".");
+               warning("Failed to save data to temporary folder, now save it to working directory");
                show( system.time( save(newdata, decision.values, probability, verbose, na.omit, ..., file=fileRdata) ) );
             }  
 
