@@ -1098,7 +1098,7 @@ predict.load <- function (object, gpu.id=NULL, verbose=FALSE )
             stop(length(gpu.id) - sum(unlist(ret)), "GPU(s) are failed to load SVM model.\n" )
 
         unlink(file.RDS);
-        cluster <- list(type="snow_cluster", cluster=cl, ncores=gpu.id);
+        cluster <- list(type="snow_cluster", cluster=cl, ncores=length(gpu.id), gpuid=gpu.id);
 
 
     }
@@ -1235,9 +1235,9 @@ predict.unload <- function (object )
             return(ret$error==0);
         }
 
-        ret <- clusterApply(object$cluster$cluster, 1:length(object$cluster$ncores), ReomoteR3 );
+        ret <- clusterApply(object$cluster$cluster, 1:object$cluster$ncores, ReomoteR3 );
         if( !all(unlist(ret)))
-            warning( length(object$cluster$ncores) - sum(unlist(ret)), "GPU(s) are failed to unload SVM model.\n" )
+            warning( object$cluster$ncores - sum(unlist(ret)), "GPU(s) are failed to unload SVM model.\n" )
 
         ret <- stopCluster(object$cluster$cluster);
         ret$error <- 0;
